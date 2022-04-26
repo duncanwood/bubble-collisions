@@ -596,7 +596,7 @@ int dY_bubbles(double t, double *y, double *c1, double *c2, int nx, double *dY_o
 		double A, B, a, alpha;
 		alpha = y[ny*i+ny-2];
 		a = y[ny*i+ny-1];
-		A = (tt+0.5/tt) - 0.5*alpha*alpha*(1./(ct*st) + 8*PI*tt*V[i]);
+	        A = (tt+0.5/tt) - 0.5*alpha*alpha*(1./(ct*st) + 8*PI*tt*V[i]);
 		B = 0.0;
 		for (k=0; k<the_model.nfields; k++) {
 			double Pi_k = y[ny*i+the_model.nfields+k];
@@ -609,7 +609,8 @@ int dY_bubbles(double t, double *y, double *c1, double *c2, int nx, double *dY_o
 				- alpha*a*dV[the_model.nfields*i+k]; // dPi/dN
 		}
 		B *= 2*PI*alphaa[i]*alphaa[i]*tt;
-		dY_out[ny*i+ny-2] = alpha*(A+B); // dalpha/dN
+		//dY_out[ny*i+ny-2] = alpha*(A+B); // dalpha/dN
+		dY_out[ny*i+ny-2] = 0;
 		dY_out[ny*i+ny-1] = a*(-A+B); // da/dN
 	}
 

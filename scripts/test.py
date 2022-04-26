@@ -9,9 +9,9 @@ from bubble_collisions.cosmoTransitions import tunneling1D
 from bubble_collisions.derivsAndSmoothing import deriv14, smooth
 
 def runSimulations(overwrite):
-    mu = 0.01
+    mu = 0.001
     omega = 0.054288352331898125
-    Delta_phi = 0.000793447464875
+    Delta_phi = 0.01 #0.000793447464875
     phi_vac = 3.0
 
     omega = .4
@@ -38,8 +38,11 @@ def runSimulations(overwrite):
     dphi = profile.dPhi[:,np.newaxis]
     inst = dict(r=r, phi=phi, dphi=dphi)
     inst1 = inst2 = inst
+    plt.plot(r, phi)
+    plt.savefig("inst_r_phi.pdf")
+    #print(inst1)
     
-    model.setParams(phi0=phi_vac)
+    """model.setParams(phi0=phi_vac)
     simulation.setFileParams("test/test_collision_fixed.dat", xres=4, tout=.05)
     simulation.setIntegrationParams(mass_osc = dV(phi_vac+.01)/.01)
     if (overwrite or not os.path.exists("test/test_collision_fixed.dat")):
@@ -51,7 +54,7 @@ def runSimulations(overwrite):
     simulation.setMonitorCallback(collisionRunner.monitorFunc1D(50., 250., 4))
     if (overwrite or not os.path.exists("test/test_collision.dat")):
         output = collisionRunner.runModelFromInstanton(
-            model, inst1, inst2, phiF, xsep=1.0, tfix=4.0, tmax=50.0)
+            model, inst1, inst2, phiF, xsep=1.0, tfix=4.0, tmax=50.0)"""
     
     simulation.setFileParams("test/test_no_collision.dat", 
         "test/test_no_collision_chris.dat", xres=4)
@@ -156,9 +159,9 @@ if __name__ == "__main__":
     except:
         pass
     runSimulations(args.overwrite)
-    runFullSky()
-    runFitting()
-    comparePerturbationCalculations()
+    #runFullSky()
+    #runFitting()
+    #comparePerturbationCalculations()
     
 
 

@@ -4,6 +4,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.animation as manimation
 from bubble_collisions import simulation
+import sys
 
 FFMpegWriter = manimation.writers['ffmpeg']
 metadata = dict(title='Movie Test', artist='Matplotlib',
@@ -12,10 +13,11 @@ framerate = 30
 duration = 15
 writer = FFMpegWriter(fps=framerate, metadata=metadata, bitrate=2000)
 
-data = simulation.readFromFile(
-    'quartic_nonident_varDV_1.00_varsig_2.25_varbp_1.00_fields_xsep=1.00.dat')
+inFile = sys.argv[1]
+data = simulation.readFromFile(inFile)
+
 Ndata = np.array([d[0] for d in data])
-x = np.linspace(-np.pi/2, 1+np.pi/2, 5000)
+x = np.linspace(0, 1+np.pi/2, 5000)
 N_list = np.linspace(0,4.99,framerate*duration)
 
 fig = plt.figure()
@@ -29,7 +31,7 @@ with writer.saving(fig, "collision_movie.mp4", 160):
         y = Y[:,0,0]
         alpha = Y[:,0,2]-1
         a = Y[:,0,3]-1
-        x2 = np.cosh(N)*x
+        x2 = x #np.cosh(N)*x
         ax1.cla()
         ax1.plot(x2,y, 'b', lw=1.5)
         ax1.set_ylabel(r"Inflaton field values ($M_{\rm Pl}$)")

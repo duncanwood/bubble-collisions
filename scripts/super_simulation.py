@@ -11,9 +11,9 @@ def runScript(res, fname, xsep=1.0):
     The 'res' input parameter specifies the overall resolution relative
     to the default value that was used for the collision_pheno paper.
     """
-    mu = 0.01
+    mu = 0.4 #0.01
     omega = 0.054288352331898125
-    Delta_phi = 0.000793447464875
+    Delta_phi = 0.01 #0.000793447464875
     phi_vac = 3.0
 
     model = models.GenericPiecewise_NoHilltop_Model(
@@ -45,10 +45,10 @@ def runScript(res, fname, xsep=1.0):
     simulation.setFileParams(fname, xres=8, tout=.1)
     simulation.setIntegrationParams(mass_osc = dV(phi_vac+.01)/.01)
     t0,x0,y0 = collisionRunner.calcInitialDataFromInst(
-        model, inst,inst, phiF, xsep)
+        model, inst, None, phiF, xsep)
     simulation.setMonitorCallback(
         collisionRunner.monitorFunc1D(100.*res, 500.*res, 4))
-    tfix = 5.0
+    tfix = 0.5
     t, x, y = simulation.runCollision(x0,y0,t0,tfix)
     if (t < tfix*.9999):
         raise RuntimeError("Didn't reach tfix. Aborting.")
@@ -119,7 +119,7 @@ def runNonIdentScript(res, fname, xsep=1.0):
     simulation.setFileParams(fname, xres=8, tout=.1)
     simulation.setIntegrationParams(mass_osc = dV(phi_vac+.01)/.01)
     t0,x0,y0 = collisionRunner.calcInitialDataFromInst(
-        model, inst1,inst2, phiF, xsep)
+        model, inst1,None, phiF, xsep)
     simulation.setMonitorCallback(
         collisionRunner.monitorFunc1D(100.*res, 500.*res, 4))
     tfix = 5.0
