@@ -18,28 +18,20 @@ data = simulation.readFromFile(inFile)
 
 Ndata = np.array([d[0] for d in data])
 x = np.linspace(-2, 2, 5000)
-N_list = np.linspace(0,3.9,framerate*duration)
+N_list = np.linspace(0,4.99,framerate*duration)
 
-phi=[]
-alphaa = []
-aa =[]
 fig = plt.figure()
 ax1 = plt.subplot(211)
 ax2 = plt.subplot(212)
 
-fig = plt.figure()
-
-with writer.saving(fig, "collision_movie.mp4", 160):
-    for i in range(len(N_list)):
+with writer.saving(fig, "collision_movie_old.mp4", 160):
+    for N in N_list:
         Y=simulation.valsOnGrid(
-        N_list[i]*np.ones_like(x),x, data, [d[0] for d in data], False)
-        phi.append(Y[:,0,0])
-        alphaa.append(Y[:,0,2]/np.cosh(N_list[i]))
-        aa.append(Y[:,0,3])
-        """y = Y[:,0,0]
+            N*np.ones_like(x),x, data, [d[0] for d in data], False)
+        y = Y[:,0,0]
         alpha = Y[:,0,2]-1
         a = Y[:,0,3]-1
-        x2 = np.cosh(N_list[i])*x
+        x2 = x
         ax1.cla()
         ax1.plot(x2,y, 'b', lw=1.5)
         ax1.set_ylabel(r"Inflaton field values ($M_{\rm Pl}$)")
@@ -58,16 +50,4 @@ with writer.saving(fig, "collision_movie.mp4", 160):
             ymax=max(max(alpha),max(a),.005)*1.2)
         ax2.set_xlabel(r"Physical distance ($r_{\rm dS}$)")
         plt.subplots_adjust(hspace=.1, top=.95, right=.9)
-        writer.grab_frame()"""
-
-    plt.contourf(x,N_list,phi,4,cmap='RdGy')
-    plt.colorbar()
-    plt.savefig("phi_contour.pdf")
-    plt.figure()
-    plt.contourf(x,N_list,alphaa,4,cmap='RdGy')
-    plt.colorbar()
-    plt.savefig("alpha_contour.pdf")
-    plt.figure()
-    plt.contourf(x,N_list,aa,4,cmap='RdGy')
-    plt.colorbar()
-    plt.savefig("a_contour.pdf")
+        writer.grab_frame()
