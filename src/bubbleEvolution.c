@@ -583,9 +583,9 @@ int dY_bubbles(double t, double *y, double *c1, double *c2, int nx, double *dY_o
 
 	// Calculate the potential and its gradient
 	int errcode;
-    // The potential and its gradient.
+        // The potential and its gradient.
 	double *V = malloc(sizeof(double)*nx);
-    double *dV = malloc(sizeof(double)*nx*the_model.nfields);
+        double *dV = malloc(sizeof(double)*nx*the_model.nfields);
 	errcode = the_model.V(the_model.obj, nx, ny, y, V);
 	if (errcode < 0) return errcode;
 	errcode = the_model.dV(the_model.obj, nx, ny, y, dV);
@@ -593,29 +593,37 @@ int dY_bubbles(double t, double *y, double *c1, double *c2, int nx, double *dY_o
 	
 	// Start calculating dY_out
 	for (i=0; i<nx; i++) {
-		double A, B, a, alpha;
+		double A, B, a, alpha, da, dalpha;
 		alpha = y[ny*i+ny-2];
 		a = y[ny*i+ny-1];
+		dalpha = dy[ny*i+ny-2];
+		da = dy[ny*i+ny-1];
 	        A = (tt+0.5/tt) - 0.5*alpha*alpha*(1./(ct*st) + 8*PI*tt*V[i]);
-		//A = (0.5/tt) - 0.5*alpha*alpha*(1./(ct*st) + 8*PI*tt*V[i]);
+		//A = tt;
 		B = 0.0;
 		for (k=0; k<the_model.nfields; k++) {
 			double Pi_k = y[ny*i+the_model.nfields+k];
+			double dPi_k = dy[ny*i+the_model.nfields+k];
 			double Phi_k = dy[the_model.nfields*i+k]/ct;
 			double dPhi_k = d2y[the_model.nfields*i+k]/ct;
 			B += Phi_k*Phi_k + Pi_k*Pi_k;
+			//B += Pi_k*Phi_k*ct;
 			dY_out[ny*i+k] = alphaa[i]*Pi_k; // dphi/dN
 			dY_out[ny*i+the_model.nfields+k] = -(tt+2.0/tt)*Pi_k
 				+ (dalphaa[i]*Phi_k + alphaa[i]*dPhi_k)/ct
 				- alpha*a*dV[the_model.nfields*i+k]; // dPi/dN
-
-			//dY_out[ny*i+the_model.nfields+k] = -(2.0/tt)*Pi_k
-			//	+ (dalphaa[i]*Phi_k + alphaa[i]*dPhi_k)/ct
+			//dY_out[ny*i+the_model.nfields+k] = -tt*Pi_k
+			//	+ dalpha*Phi_k/a - da*alpha*dPhi_k/(a*a*ct*ct)
+			//	+ alpha*(2*Phi_k/i+dPhi_k)/ct
 			//	- alpha*a*dV[the_model.nfields*i+k]; // dPi/dN
+			
 		}
 		B *= 2*PI*alphaa[i]*alphaa[i]*tt;
+		//B *= 4*PI*alpha*i;
 		dY_out[ny*i+ny-2] = alpha*(A+B); // dalpha/dN
+		//dY_out[ny*i+ny-2] = alpha*A; // dalpha/dN
 		dY_out[ny*i+ny-1] = a*(-A+B); // da/dN
+		//dY_out[ny*i+ny-1] = -a*A+B; // da/dN
 	}
 
     free(dy);

@@ -18,7 +18,7 @@ data = simulation.readFromFile(inFile)
 
 Ndata = np.array([d[0] for d in data])
 x = np.linspace(-2, 2, 5000)
-N_list = np.linspace(0,4.99,framerate*duration)
+N_list = np.linspace(0,3.99,framerate*duration)
 
 fig = plt.figure()
 ax1 = plt.subplot(211)
