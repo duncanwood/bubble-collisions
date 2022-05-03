@@ -312,7 +312,7 @@ double evolveWave(double *x0, double *y0, int nx0, double t0, double tmax,
 		for (i=0; i<numEvolve; i++) {
 			// Evolve the regions
 		//	LOGMSG("Evolving the regions");
-			if(!evolveRegions(R0, dt, t, nsteps, 2, c1, c2, &dY_wave))
+			if(!evolveRegions(R0, dt, t, x, nx, nsteps, 2, c1, c2, &dY_wave))
 				return -1;
 			t += dt*nsteps;
 		}
@@ -504,7 +504,7 @@ static PyObject *waveEvolve_py(PyObject *self, PyObject *args)
 		r = r->nextReg;
 	}
 	LOGMSG("Nmax: %i", Nmax);
-	evolveRegions(r0, dt/pow2N(Nmax), 0.0, pow2N(Nmax), 2, c1, c2, &dY_wave);
+	evolveRegions(r0, dt/pow2N(Nmax), 0.0, x, nx, pow2N(Nmax), 2, c1, c2, &dY_wave);
 	
 	// Extract and return the data from the regions.
 	yout = dataFromRegions(r0, 2, &nx);

@@ -75,9 +75,10 @@ double * dataFromRegions(Region *r0, int ny, int *nx /*out*/);
 void deallocRegions(Region *r0);
 
 
-int evolveRegions(Region *r0, double dt, double t0, int nmax, int ny,
+int evolveRegions(Region *r0, double dt, double t0, 
+				   double *x, int nx, int nmax, int ny,
 				   double *c1, double *c2,
-				   int (*dY)(double, double *, double *, double *, int, double *));
+				   int (*dY)(double, double *, double *, double *, double *, int, double *));
 	// r0 is start region
 	// dt is the shortest time-step, t0 is starting time
 	// nmax is number of (shortest) steps to evolve.

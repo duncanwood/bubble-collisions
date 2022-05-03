@@ -558,7 +558,7 @@ double *monitorFunc(double t, int nx, double *x, double *y, double *c1) {
 	return m;
 }
 
-int dY_bubbles(double t, double *y, double *c1, double *c2, int nx, double *dY_out) {
+int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, double *dY_out) {
 	int i, k, ny;
 	double ct, st, tt; // hyperbolic functions
 	
@@ -838,16 +838,16 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 			//	LOGMSG("Evolving the regions");
 			if (exactTmax && t + dt*nsteps >= tmax) {
 				dt = (tmax-t)/nsteps;
-				err = evolveRegions(R0, dt, t, nsteps, ny, c1, c2, &dY_bubbles);
+				err = evolveRegions(R0, dt, t, x, nx, nsteps, ny, c1, c2, &dY_bubbles);
 				t = tmax;
 			}
 			else if (exact_tout && t + dt*nsteps >= t_write && t_write > t) {
 				dt = (t_write-t)/nsteps;
-				err = evolveRegions(R0, dt, t, nsteps, ny, c1, c2, &dY_bubbles);
+				err = evolveRegions(R0, dt, t, x, nx, nsteps, ny, c1, c2, &dY_bubbles);
 				t = t_write;
 			}
 			else {
-				err = evolveRegions(R0, dt, t, nsteps, ny, c1, c2, &dY_bubbles);
+				err = evolveRegions(R0, dt, t, x, nx, nsteps, ny, c1, c2, &dY_bubbles);
 				t += dt*nsteps;
 			}
 			if (err == -1) return -1;

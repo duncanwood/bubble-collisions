@@ -34,7 +34,7 @@ double *interpGrid_scipy(double *xold, int nold, double *yold, int ny, double *x
 	// but it works a little bit better (although more slowly) than my custom implementation.
 
 double *monitorFunc(double t, int nx, double *x, double *y, double *c1);
-int dY_bubbles(double t, double *y, double *c1, double *c2, int nx, double *dY_out);
+int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, double *dY_out);
 //double speedOfLight(double N); // In our dS coords, c is time-dependent.
 double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, double alphaMax, 
 					 int exactTmax, int growBounds, int overwritefile,

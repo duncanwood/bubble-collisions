@@ -301,6 +301,11 @@ void calcDerivCoefs(double *x, int nx, double *c1 /*out*/, double *c2 /*out*/)
 }
 
 void calcDerivs(double *y, double *c, int nx, int nyin, int kin, double *dyout, int nyout, int kout) {
+	
+    ///  Calculate the derivative of y with coefficients c.
+    /// Parameters
+    /// ----------
+	
 	int i;
 	
 	// middle
@@ -388,13 +393,14 @@ void deallocRegions(Region *r0) {
 	}
 }
 
-int evolveRegions(Region *r0, double dt, double t0, int nmax, int ny,
+int evolveRegions(Region *r0, double dt, double t0, 
+				   double *x, int nx, int nmax, int ny,
 				   double *c1, double *c2,
-				   int (*dY)(double, double *, double *, double *, int, double *)) {
+				   int (*dY)(double, double *, double *, double *, double *, int, double *)) {
 	// r0 is start region
 	// dt is the shortest time-step, t0 is starting time
 	// nmax is number of (shortest) steps to evolve.
-	// dY is the derivative function. dY(t, y, c1, c2, nx, dy_out) (and nc = nx-4)
+	// dY is the derivative function. dY(t, x, y, c1, c2, nx, dy_out) (and nc = nx-4)
 	// Note that the data should be shaped like (nx, ny), such that continous
 	// blocks of memory are continuous in x.
 	
@@ -447,7 +453,7 @@ int evolveRegions(Region *r0, double dt, double t0, int nmax, int ny,
 				LOGMSG("iy %i, ic %i, w %i", iy,ic,w);
 				LOGMSG("startIndex %i, leftOverlap %i, di %i", r->startIndex, r->leftOverlap, di);
 				LOGMSG("dt=%0.3e, N=%i", dt, r->N);
-				err = dY(t, y0+iy, c1+ic, c2+ic, w, dydt+iy);
+				err = dY(t, x, y0+iy, c1+ic, c2+ic, w, dydt+iy);
 				if (err != 0) return err;
 			//	di = dw = 0; // <--- should probably remove this later...
 				iy += di*ny;
@@ -460,7 +466,7 @@ int evolveRegions(Region *r0, double dt, double t0, int nmax, int ny,
 				
 				// second step.
 				t += 0.5*Dt;
-				err = dY(t, y1+iy, c1+ic, c2+ic, w, dydt+iy);
+				err = dY(t, x, y1+iy, c1+ic, c2+ic, w, dydt+iy);
 				if (err != 0) return err;
 				iy += di*ny;
 				ic += di*5;
@@ -471,7 +477,7 @@ int evolveRegions(Region *r0, double dt, double t0, int nmax, int ny,
 				}
 
 				// third step.
-				err = dY(t, y1+iy, c1+ic, c2+ic, w, dydt+iy);
+				err = dY(t, x, y1+iy, c1+ic, c2+ic, w, dydt+iy);
 				if (err != 0) return err;
 				iy += di*ny;
 				ic += di*5;
@@ -483,7 +489,7 @@ int evolveRegions(Region *r0, double dt, double t0, int nmax, int ny,
 
 				// fourth step.
 				t += 0.5*Dt;
-				err = dY(t, y1+iy, c1+ic, c2+ic, w, dydt+iy);
+				err = dY(t, x, y1+iy, c1+ic, c2+ic, w, dydt+iy);
 				if (err != 0) return err;
 				iy += di*ny;
 				w -= dw;
