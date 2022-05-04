@@ -595,7 +595,9 @@ int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, d
 	for (i=0; i<nx; i++) {
 		double A, B, a, alpha, da, dalpha;
 		alpha = y[ny*i+ny-2];
+		dalpha = dy[ny*i+ny-2];
 		a = y[ny*i+ny-1];
+		da = dy[ny*i+ny-1];
 		//A = (tt+0.5/tt) - 0.5*alpha*alpha*(1./(ct*st) + 8*PI*tt*V[i]);
 		A = tt;
 		B = 0.0;
