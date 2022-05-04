@@ -14,7 +14,7 @@ def runSimulations(overwrite):
     Delta_phi = 0.000793447464875
     phi_vac = 3.0
 
-    omega = .4
+    #omega = .4
 
     model = models.GenericPiecewise_NoHilltop_Model(
         mu=mu, omega=omega, Delta_phi=Delta_phi, phi0=0.0)
@@ -38,7 +38,7 @@ def runSimulations(overwrite):
     dphi = profile.dPhi[:,np.newaxis]
     inst = dict(r=r, phi=phi, dphi=dphi)
     inst1 = inst2 = inst
-    
+    """
     model.setParams(phi0=phi_vac)
     simulation.setFileParams("test/test_collision_fixed.dat", xres=4, tout=.05)
     simulation.setIntegrationParams(mass_osc = dV(phi_vac+.01)/.01)
@@ -52,13 +52,13 @@ def runSimulations(overwrite):
     if (overwrite or not os.path.exists("test/test_collision.dat")):
         output = collisionRunner.runModelFromInstanton(
             model, inst1, inst2, phiF, xsep=1.0, tfix=4.0, tmax=50.0)
-    
+    """
     simulation.setFileParams("test/test_no_collision.dat", 
         "test/test_no_collision_chris.dat", xres=4)
     simulation.setMonitorCallback(collisionRunner.monitorFunc1D(50., 250., 2))
     if (overwrite or not os.path.exists("test/test_no_collision.dat")):
         output = collisionRunner.runModelFromInstanton(
-            model, inst1, None, phiF, xsep=1.0, tfix=4.0, tmax=50.0)      
+            model, inst1, None, phiF, xsep=1.0, tfix=4.0, tmax=10.0)      
 
 
 from bubble_collisions import full_sky
@@ -156,9 +156,9 @@ if __name__ == "__main__":
     except:
         pass
     runSimulations(args.overwrite)
-    runFullSky()
-    runFitting()
-    comparePerturbationCalculations()
+    #runFullSky()
+    #runFitting()
+    #comparePerturbationCalculations()
     
 
 
