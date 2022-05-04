@@ -624,6 +624,9 @@ int dY_bubbles(double t, double *y, double *c1, double *c2, int nx, double *dY_o
 		//dY_out[ny*i+ny-2] = alpha*A; // dalpha/dN
 		dY_out[ny*i+ny-1] = a*(-A+B); // da/dN
 		//dY_out[ny*i+ny-1] = -a*A+B; // da/dN
+		if (i==5) {
+		    LOGMSG("dpi %i %f",i, dY_out[ny*i+the_model.nfields]);
+		}
 	}
 
     free(dy);
