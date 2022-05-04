@@ -14,7 +14,7 @@ def runSimulations(overwrite):
     Delta_phi = 0.000793447464875
     phi_vac = 3.0
 
-    #omega = .4
+    omega = .4
 
     model = models.GenericPiecewise_NoHilltop_Model(
         mu=mu, omega=omega, Delta_phi=Delta_phi, phi0=0.0)
@@ -58,7 +58,7 @@ def runSimulations(overwrite):
     simulation.setMonitorCallback(collisionRunner.monitorFunc1D(50., 250., 2))
     if (overwrite or not os.path.exists("test/test_no_collision.dat")):
         output = collisionRunner.runModelFromInstanton(
-            model, inst1, None, phiF, xsep=1.0, tfix=4.0, tmax=10.0)      
+            model, inst1, None, phiF, xsep=1.0, tfix=1.0, tmax=4.0)      
 
 
 from bubble_collisions import full_sky

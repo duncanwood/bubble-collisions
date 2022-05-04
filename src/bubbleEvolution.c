@@ -524,7 +524,7 @@ double *monitorFunc(double t, int nx, double *x, double *y, double *c1) {
 		calcDerivs(y, c1, nx, ny, k, dydx, the_model.nfields, k);
 //		LOGMSG("vMonitorGain: %0.4e", vMonitorGain[k]);
 	}
-	
+
 //	else if (monitor_type == CALL_BACK) 
 	{
 		// Make the input for the callback
@@ -536,7 +536,7 @@ double *monitorFunc(double t, int nx, double *x, double *y, double *c1) {
 		memcpy(yobj_data, y, sizeof(double)*nx*ny);
 		memcpy(xobj_data, x, sizeof(double)*nx);
 		PyObject *arglist = Py_BuildValue("(dOO)", t, xobj, yobj);
-
+                
 		// Run the callback
 		PyObject *result = PyObject_CallObject(monitor_callback, arglist);
 		Py_DECREF(arglist);
@@ -554,7 +554,6 @@ double *monitorFunc(double t, int nx, double *x, double *y, double *c1) {
 		Py_DECREF(mobj);
 		Py_DECREF(result);
 	}
-	
 	return m;
 }
 
@@ -572,14 +571,19 @@ int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, d
 	double *dy = malloc(sizeof(double)*nx*the_model.nfields);
 	double *d2y = malloc(sizeof(double)*nx*the_model.nfields);
 	double *alphaa = malloc(sizeof(double)*nx);
-	double *dalphaa = malloc(sizeof(double)*nx);
+	double *aa = malloc(sizeof(double)*nx);
+	double *dalphaa = malloc(sizeof(double)*nx);	
+	double *daa = malloc(sizeof(double)*nx);	
 	for (k=0; k<the_model.nfields; k++) {
 		calcDerivs(y, c1, nx, ny, k, dy, the_model.nfields, k);
 		calcDerivs(y, c2, nx, ny, k, d2y, the_model.nfields, k);
 	}
-	for (i=0; i<nx; i++)
-		alphaa[i] = y[ny*i+(ny-2)] / y[ny*i+(ny-1)];
+	for (i=0; i<nx; i++) {
+		alphaa[i] = y[ny*i+(ny-2)];
+	        aa[i] = y[ny*i+ny-1];
+	}
 	calcDerivs(alphaa, c1, nx, 1, 0, dalphaa, 1, 0);
+	calcDerivs(aa, c1, nx, 1, 0, daa, 1, 0);
 
 	// Calculate the potential and its gradient
 	int errcode;
@@ -593,7 +597,7 @@ int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, d
 	
 	// Start calculating dY_out
 	for (i=0; i<nx; i++) {
-		double A, B, a, alpha, da, dalpha;
+		double A, B, a, alpha;
 		alpha = y[ny*i+ny-2];
 		a = y[ny*i+ny-1];
 		//A = (tt+0.5/tt) - 0.5*alpha*alpha*(1./(ct*st) + 8*PI*tt*V[i]);
@@ -610,17 +614,20 @@ int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, d
 			//dY_out[ny*i+the_model.nfields+k] = -(tt+2.0/tt)*Pi_k
 			//	+ (dalphaa[i]*Phi_k + alphaa[i]*dPhi_k)/ct
 			//	- alpha*a*dV[the_model.nfields*i+k]; // dPi/dN
-			dY_out[ny*i+the_model.nfields+k] = -tt*Pi_k
-				+ dalpha*Phi_k/a + alpha*dPhi_k/(ct*ct*a*a)
-				+ alpha*(2*Phi_k/x[i] + dPhi_k)/ct
+			dY_out[ny*i+the_model.nfields+k]= -tt*Pi_k
+				+ (dalphaa[i]*Phi_k + daa[i]*Phi_k*alpha/a)/(ct*a)
+				+ alpha*(2*Phi_k/x[i] + dPhi_k)/(ct*a)
 				- alpha*a*dV[the_model.nfields*i+k]; // dPi/dN
 		}
 		//B *= 2*PI*alphaa[i]*alphaa[i]*tt;
                 B *= 4*PI*alpha*x[i];
 		//dY_out[ny*i+ny-2] = alpha*(A+B); // dalpha/dN
 		dY_out[ny*i+ny-2] = alpha*A; // dalpha/dN
+		//dY_out[ny*i+ny-2] = 0; // dalpha/dN
 		//dY_out[ny*i+ny-1] = a*(-A+B); // da/dN
 		dY_out[ny*i+ny-1] = -a*A+B; // da/dN
+		//dY_out[ny*i+ny-1] = 0; // da/dN
+		LOGMSG("dpi %f", dY_out[ny*i+the_model.nfields]);
 	}
 
     free(dy);
@@ -738,7 +745,7 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 		
 		m = monitorFunc(t, nx, x, y, c1);
 		if (m == NULL) {
-			LOGMSG("Error in monitorFunc.");
+		        LOGMSG("Error in monitorFunc.");
 			goto out;
 		}
 		xnew = remakeGrid(x, m, nx, gridUniformity, xmin, xmax, &nxnew);
