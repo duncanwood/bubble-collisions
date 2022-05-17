@@ -291,6 +291,7 @@ typedef struct {
     ModelObject base;
     double m;
     double a;
+    double c;
     double g;
     double f;
 } TiltedHatObject;
@@ -305,8 +306,7 @@ static int tilted_hat_V(
         double phi2 = y_in[i*ny+1];
         y_out[i] = pow(self->m,2)*(pow(phi1,2) + pow(phi2,2)) - 
                     self->a*pow(pow(phi1,2) + pow(phi2,2),2) + 
-                    (self->g*pow(pow(phi1,2) + pow(phi2,2),3))/pow(self->f,2) + 
-                    10*pow(self->f,4)*sin(phi1/(2.*self->f));
+                    self->c*pow(pow(phi1,2) + pow(phi2,2),3) + self->g*sin(phi1*pow(self->f,-1));
     }
     return 0;
 }
@@ -319,20 +319,20 @@ static int tilted_hat_dV(
     for (i=0; i<numpts; i++) {
         double phi1 = y_in[i*ny];
         double phi2 = y_in[i*ny+1];
-        y_out[2*i] = 2*pow(self->m,2)*phi1 - 4*self->a*phi1*(pow(phi1,2) + pow(phi2,2)) + 
-                     (6*self->g*phi1*pow(pow(phi1,2) + pow(phi2,2),2))/
-                     pow(self->f,2) + 5*pow(self->f,3)*cos(phi1/(2.*self->f));
-        y_out[2*i+1] = 2*pow(self->m,2)*phi2 - 4*self->a*phi2*(pow(phi1,2) + pow(phi2,2)) + 
-                    (6*self->g*phi2*pow(pow(phi1,2) + pow(phi2,2),2))/pow(self->f,2);
+        y_out[2*i] = self->g*cos(phi1*pow(self->f,-1))*pow(self->f,-1) + 2*phi1*pow(self->m,2) - 
+                         4*self->a*phi1*(pow(phi1,2) + pow(phi2,2)) + 
+                         6*self->c*phi1*pow(pow(phi1,2) + pow(phi2,2),2);
+        y_out[2*i+1] = 2*phi2*pow(self->m,2) - 4*self->a*phi2*(pow(phi1,2) + pow(phi2,2)) + 
+                         6*self->c*phi2*pow(pow(phi1,2) + pow(phi2,2),2);
     }
     return 0;
 }
 
 static int tilted_hat_init(TiltedHatObject* self, PyObject *args, 
                              PyObject *keywds) {
-    static char *kwlist[] = {"m","a","g","f",NULL};
+    static char *kwlist[] = {"m","a","c","g","f",NULL};
     int success = PyArg_ParseTupleAndKeywords(
-        args, keywds, "ddd", kwlist, &self->m, &self->a, &self->g, &self->f);
+        args, keywds, "ddd", kwlist, &self->m, &self->a, &self->c, &self->g, &self->f);
     if (!success) return -1;
     self->base.V = (ScalarFunc)tilted_hat_V;  
     self->base.dV = (ScalarFunc)tilted_hat_dV;
@@ -345,7 +345,7 @@ static PyTypeObject tilted_hat_type = {
 };
 
 static const char *tilted_hat_docstring = 
-"TiltedHat(m, a, g, f)\n"
+"TiltedHat(m, a, c, g, f)\n"
 "\n"
 "A tilted hat model with two scalar fields.\n"
 "From arxiv:2001.09160\n";
