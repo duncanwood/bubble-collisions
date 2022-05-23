@@ -3,7 +3,7 @@ from bubble_collisions import simulation, models, collisionRunner
 from bubble_collisions.cosmoTransitions import tunneling1D
 #from bubble_collisions.cosmoTransitions_old import tunneling1D as tunneling1D_old
 from bubble_collisions.derivsAndSmoothing import deriv14
-
+import matplotlib.pyplot as plt
 
 def runScript(res, fname, xsep=1.0):
     """
@@ -11,10 +11,10 @@ def runScript(res, fname, xsep=1.0):
     The 'res' input parameter specifies the overall resolution relative
     to the default value that was used for the collision_pheno paper.
     """
-    mu = 0.01
-    omega = 0.054288352331898125
-    Delta_phi = 0.000793447464875
+    mu = 0.05
+    Delta_phi = 0.001
     phi_vac = 3.0
+    omega = .1
 
     model = models.GenericPiecewise_NoHilltop_Model(
         mu=mu, omega=omega, Delta_phi=Delta_phi, phi0=0.0)
@@ -38,6 +38,14 @@ def runScript(res, fname, xsep=1.0):
     dphi = profile.dPhi[:,np.newaxis]
     inst = dict(r=r, phi=phi, dphi=dphi)
     inst1 = inst2 = inst
+    
+    plt.plot(r,phi)
+    plt.title("phi(r)")
+    plt.savefig("phi_r.pdf")
+    plt.figure()
+    plt.plot(phi,V(phi))
+    plt.title("V(phi)")
+    plt.savefig("V_phi.pdf")
 
     model.setParams(phi0=phi_vac)
     # At first, the output should be kind of coarse.
@@ -45,14 +53,15 @@ def runScript(res, fname, xsep=1.0):
     simulation.setFileParams(fname, xres=8, tout=.1)
     simulation.setIntegrationParams(mass_osc = dV(phi_vac+.01)/.01)
     t0,x0,y0 = collisionRunner.calcInitialDataFromInst(
-        model, inst,inst, phiF, xsep)
+        model, inst1, None, phiF, xsep=1.0, xmin=0.001, xmax=0.5)
     simulation.setMonitorCallback(
-        collisionRunner.monitorFunc1D(100.*res, 500.*res, 4))
-    tfix = 5.0
+        collisionRunner.monitorFunc1D(50., 250., 2))
+    tfix = 1.0
+
     t, x, y = simulation.runCollision(x0,y0,t0,tfix)
     if (t < tfix*.9999):
         raise RuntimeError("Didn't reach tfix. Aborting.")
-
+"""
     # Truncate the simulation
     truncation = .95
     bubble_radius = 2*np.arctan(np.tanh(t/2.0))
@@ -71,14 +80,15 @@ def runScript(res, fname, xsep=1.0):
     t,x,y = simulation.runCollision(x,y,t,t_end_hr_out, 
         growBounds=False, overwrite=False)
     return t,x,y
-
+"""
+"""
 def runNonIdentScript(res, fname, xsep=1.0):
-    """
+   """ """
     Run a high-resolution simulation for the benchmark model in a non-identical
     bubble simulation.
     The 'res' input parameter specifies the overall resolution relative
     to the default value that was used for the collision_pheno paper.
-    """
+   """ """
     mu = 0.01
     omega = 0.054288352331898125
     Delta_phi = 0.000793447464875
@@ -150,7 +160,7 @@ def runNonIdentScript(res, fname, xsep=1.0):
     t,x,y = simulation.runCollision(x,y,t,t_end_hr_out, 
         growBounds=False, overwrite=False)
     return t,x,y
-
+"""
 
 if __name__ == "__main__":
     import argparse

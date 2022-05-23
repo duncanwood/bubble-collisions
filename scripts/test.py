@@ -58,8 +58,7 @@ def runSimulations(overwrite):
     simulation.setMonitorCallback(collisionRunner.monitorFunc1D(50., 250., 2))
     if (overwrite or not os.path.exists("test/test_no_collision.dat")):
         output = collisionRunner.runModelFromInstanton(
-            model, inst1, None, phiF, xsep=1.0, tfix=1.0, tmax=4.0)      
-
+            model, inst1, None, phiF, xsep=1.0, tfix=4.0, tmax=4.0)      
 
 from bubble_collisions import full_sky
 import matplotlib.pyplot as plt

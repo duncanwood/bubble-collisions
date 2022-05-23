@@ -312,7 +312,7 @@ void calcDerivs(double *y, double *c, int nx, int nyin, int kin, double *dyout, 
 	for (i=2; i<nx-2; i++) {
 		dyout[nyout*i+kout] = c[5*i]*y[nyin*(i-2)+kin] + c[5*i+1]*y[nyin*(i-1)+kin] + c[5*i+2]*y[nyin*i+kin]
 		+ c[5*i+3]*y[nyin*(i+1)+kin] + c[5*i+4]*y[nyin*(i+2)+kin];
-	//	LOGMSG("c[%i]: %0.3e  %0.3e  %0.3e  %0.3e  %0.3e", i, c[5*i], c[5*i+1], c[5*i+2], c[5*i+3], c[5*i+4]);
+		//LOGMSG("c[%i]: %0.3e  %0.3e  %0.3e  %0.3e  %0.3e", i, c[5*i], c[5*i+1], c[5*i+2], c[5*i+3], c[5*i+4]);
 	}
 	if(1) {
 		// left boundary

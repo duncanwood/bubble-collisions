@@ -14,9 +14,11 @@ All of the rest can be handled by the default arguments.
 
 import numpy as np
 from scipy import interpolate
+from scipy import integrate
 
 from .derivsAndSmoothing import deriv14, deriv23
 from . import simulation
+import matplotlib.pyplot as plt
 
 def timeSlicesForShockParams(
 		xsep, obs_inst_radius, col_wall_inner, col_wall_outer, 
@@ -228,6 +230,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	y = np.zeros((len(x), len(phiF)), dtype=float) + phiF
 	dy = np.zeros((len(x), len(phiF)), dtype=float)
 	d2y = np.zeros((len(x), len(phiF)), dtype=float)
+	xT = np.zeros((len(x), len(phiF)), dtype=float)
 	if inst1:
 		tck = interpolate.splprep(inst1['phi'].T, u=inst1['x'], s=0)[0]
 		dtck = interpolate.splprep(inst1['dphi'].T, u=inst1['x'], s=0)[0]
@@ -251,22 +254,73 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 
 	V = model.V
 	dV = model.dV
-	
+
 	t0 = rel_t0 * inst1["x"][-1]
 	if (inst2):
 		t0 = min(t0, rel_t0 * inst2["x"][-1])
-	A = -.5 + 4*np.pi*V(y)/3
-	B = 2*np.pi*np.sum(dy*dy, axis=1)/3
-	C = (1./6) * (d2y - dV(y))
-#	A = B = C = 0 # NEED TO REMOVE THIS
+	#A = -.5 + 4*np.pi*V(y)/3
+	#B = 2*np.pi*np.sum(dy*dy, axis=1)/3
+	#C = (1./6) * (d2y - dV(y))
+	#A = B = C = 0 # NEED TO REMOVE THIS
+      
+        Vinterp = interpolate.interp1d(x, V(y),fill_value="extrapolate")
+        dVinterp = interpolate.interp1d(x, dV(y).T[0],fill_value="extrapolate")
+        yinterp = interpolate.interp1d(x, y.T[0],fill_value="extrapolate")
+        dyinterp = interpolate.interp1d(x, dy.T[0],fill_value="extrapolate")
+        d2yinterp = interpolate.interp1d(x, d2y.T[0],fill_value="extrapolate")
+
+        #Only works for 1 scalar easy change just add more
+        def diffEQa(a, xi):
+            return 1/(2*xi)*a*(1 - a**2 + 8*np.pi*xi**2*a**2*Vinterp(xi) + 4*np.pi*xi**2*dyinterp(xi)**2)
+        ainit = 1
+        asol = integrate.odeint(diffEQa,ainit,x)
+        ainterp = interpolate.interp1d(x,asol.T[0],fill_value="extrapolate") 
+
+        def diffEQalph(alph, xi):
+            return -(alph*(ainterp(xi) + ainterp(xi)**3*(-1 + 8*np.pi*xi**2*Vinterp(xi)) - xi*diffEQa(ainterp(xi),xi)))/(xi*ainterp(xi)) 
+         
+        alphinit = 1
+        alphsol = integrate.odeint(diffEQalph,alphinit,x)
+        alphinterp = interpolate.interp1d(x,alphsol.T[0],fill_value="extrapolate")
+
+        a0 = asol.T[0]
+        alpha0 = alphsol.T[0]
+        a0ana =np.ones(len(x))+x**2*4*np.pi*Vinterp(x[-1])/3
+        alph0ana =np.ones(len(x))-x**2*4*np.pi*Vinterp(x[-1])/3
+
+        plt.figure()
+        plt.plot(x,asol.T[0],'b',label='a')
+        plt.plot(x,alphsol.T[0],'g',label='alpha')
+        plt.plot(x,a0ana,'b--',label='a analytic')
+        plt.plot(x,alph0ana,'g--',label='alpha analytic')
+        plt.legend()
+        plt.xlabel('x')
+        plt.savefig("a_alpha_x.pdf")
+
+        plt.figure()
+        plt.plot(x,Vinterp(x),'r')
+        plt.savefig("V_x.pdf")
+
+	phi2 = -(alpha0*(x*alpha0*diffEQa(ainterp(x),x)*dyinterp(x) 
+        - a0*(x*diffEQalph(alphinterp(x),x)*dyinterp(x) + alpha0*(2*dyinterp(x) + x*d2yinterp(x))) 
+        + x*a0**3*alpha0*dVinterp(x)*yinterp(x)))/(2*x*a0**3)
+        a2 = 1/2*(-a0-8*np.pi*x*a0*phi2*dyinterp(x))
+
+        phi2T = np.ndarray((len(x),len(phiF)),buffer=phi2)
+
 	N = len(phiF)
 	Y = np.empty((len(x), N*2+2))
-	Y[:, :N] = y + t0*t0*C # phi
-	Y[:, N:2*N] = 2*t0*C # Pi = (dphi/dN) * (a/alpha) ~ dphi/dN
-	Y[:, -2] = 1 - t0*t0*(A-B) # alpha
-	Y[:, -1] = 1 + t0*t0*(A+2*B) # a
-		
+	#Y[:, :N] = y + t0*t0*C # phi
+	#Y[:, N:2*N] = 2*t0*C # Pi = (dphi/dN) * (a/alpha) ~ dphi/dN
+	#Y[:, -2] = 1 - t0*t0*(A-B) # alpha
+	#Y[:, -1] = 1 + t0*t0*(A+2*B) # a
+	Y[:, :N] = y + t0*t0*phi2T # phi
+        Y[:, N:2*N] = 2*t0*phi2T # Pi = (dphi/dN) * (a/alpha) ~ dphi/dN
+	Y[:, -2] = alpha0 # alpha
+	Y[:, -1] = a0 + t0*t0*(a2) # a
+        	
 	return t0,x,Y
+        
 
 class monitorFunc1D(object):
 	"""
