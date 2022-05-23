@@ -13,10 +13,10 @@ duration = 15
 writer = FFMpegWriter(fps=framerate, metadata=metadata, bitrate=2000)
 
 data = simulation.readFromFile(
-    'quartic_nonident_varDV_1.00_varsig_2.25_varbp_1.00_fields_xsep=1.00.dat')
+    'test/test_no_collision.dat')
 Ndata = np.array([d[0] for d in data])
-x = np.linspace(-np.pi/2, 1+np.pi/2, 5000)
-N_list = np.linspace(0,4.99,framerate*duration)
+x = np.linspace(-1.45, 1.45, 5000)
+N_list = np.linspace(0,4.9,framerate*duration)
 
 fig = plt.figure()
 ax1 = plt.subplot(211)
