@@ -14,7 +14,7 @@ def runSimulations(overwrite):
     Delta_phi = 0.000793447464875
     phi_vac = 3.0
 
-    #omega = .4
+    omega = .4
 
     model = models.GenericPiecewise_NoHilltop_Model(
         mu=mu, omega=omega, Delta_phi=Delta_phi, phi0=0.0)

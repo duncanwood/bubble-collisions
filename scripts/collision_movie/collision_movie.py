@@ -12,8 +12,8 @@ inFile = sys.argv[1]
 data = simulation.readFromFile(inFile)
 
 Ndata = np.array([d[0] for d in data])
-x = np.linspace(-2, 2, 5000)
-N_list = np.linspace(0.0,28.0,framerate*duration)
+x = np.linspace(-1.45, 1.45, 5000)
+N_list = np.linspace(0.0,10.0,framerate*duration)
 
 phi=[]
 alphaa = []
@@ -26,8 +26,8 @@ fig = plt.figure()
 for i in range(len(N_list)):
     Y=simulation.valsOnGrid(
     N_list[i]*np.ones_like(x),x, data, [d[0] for d in data], False)
-    phi.append(Y[:,0,0]/np.cosh(N_list[i]))
-    alphaa.append(Y[:,0,2]*np.cosh(N_list[i]))
+    phi.append(Y[:,0,0])
+    alphaa.append(Y[:,0,2])
     aa.append(Y[:,0,3])
 
 plt.contourf(x,N_list,phi,10,cmap='RdGy')
