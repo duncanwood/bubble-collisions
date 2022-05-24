@@ -318,7 +318,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
         Y[:, N:2*N] = 2*t0*phi2T # Pi = (dphi/dN) * (a/alpha) ~ dphi/dN
 	Y[:, -2] = alpha0 # alpha
 	Y[:, -1] = a0 + t0*t0*(a2) # a
-        	
+        
 	return t0,x,Y
         
 

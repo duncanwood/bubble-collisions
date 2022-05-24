@@ -522,7 +522,9 @@ double *monitorFunc(double t, int nx, double *x, double *y, double *c1) {
 	ny = the_model.nfields*2 + 2;
 	for (k=0; k<the_model.nfields; k++) {
 		calcDerivs(y, c1, nx, ny, k, dydx, the_model.nfields, k);
-//		LOGMSG("vMonitorGain: %0.4e", vMonitorGain[k]);
+		for (int i=0; i<nx; i++) {
+		    if (isnan(dydx[i])) {LOGMSG("y, c1, dydx %0.4e %0.4e %0.4e", y[i], c1[i], dydx[i]);}
+		}
 	}
 
 //	else if (monitor_type == CALL_BACK) 
@@ -558,7 +560,7 @@ double *monitorFunc(double t, int nx, double *x, double *y, double *c1) {
 }
 
 int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, double *dY_out) {
-	int i, k, ny, l=0;
+	int i, k, ny;
 	double ct, st, tt; // hyperbolic functions
 	
 	ny = 2*the_model.nfields+2;
@@ -570,11 +572,22 @@ int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, d
 	// calculate the spatial derivs.
 	double *dy = malloc(sizeof(double)*nx*the_model.nfields);
 	double *d2y = malloc(sizeof(double)*nx*the_model.nfields);
+        double *alphaX = malloc(sizeof(double)*nx);
+	double *dalphaX = malloc(sizeof(double)*nx);
+        double *aX = malloc(sizeof(double)*nx);
+	double *daX = malloc(sizeof(double)*nx);
 
 	for (k=0; k<the_model.nfields; k++) {
 		calcDerivs(y, c1, nx, ny, k, dy, the_model.nfields, k);
 		calcDerivs(y, c2, nx, ny, k, d2y, the_model.nfields, k);
 	}
+	
+	for (i=0; i<nx; i++) {
+		alphaX[i] = y[ny*i+(ny-2)];
+		aX[i] = y[ny*i+ny-1];
+        }
+	calcDerivs(alphaX, c1, nx, 1, 0, dalphaX, 1, 0);
+	calcDerivs(aX, c1, nx, 1, 0, daX, 1, 0);
 
 	// Calculate the potential and its gradient
 	int errcode;
@@ -587,45 +600,27 @@ int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, d
 	if (errcode < 0) return errcode;
 	// Start calculating dY_out
 	for (i=0; i<nx; i++) {
-		double A, B, a, alpha, da, dalpha, constrerr;
-		alpha = y[ny*i+ny-2];
-		dalpha = dy[ny*i+ny-2]; //spatial deriv
-		a = y[ny*i+ny-1];
-		da = dy[ny*i+ny-1];
+		double A, B, constrerr;
 		A = tt;
 		B = 0.0;
 		for (k=0; k<the_model.nfields; k++) {
 			double Pi_k = y[ny*i+the_model.nfields+k];
-			double dPi_k = dy[ny*i+the_model.nfields+k];
-			double Phi_k = dy[ny*i+k];
-			double dPhi_k = d2y[ny*i+k];
+			double Phi_k = dy[the_model.nfields*i+k];
+			double dPhi_k = d2y[the_model.nfields*i+k];
                         B += Pi_k*Phi_k;
-			dY_out[ny*i+k] = alpha/a*Pi_k; // dphi/dN
+			dY_out[ny*i+k] = alphaX[i]/aX[i]*Pi_k; // dphi/dN
 			dY_out[ny*i+the_model.nfields+k] = -tt*Pi_k
-				+ (dalpha*Phi_k + da*Phi_k*alpha/a)/(ct*ct*a)
-				+ alpha*(2*Phi_k/x[i] + dPhi_k)/(ct*ct*a)
-				- alpha*a*dV[the_model.nfields*i+k]; // dPi/dN
+				+ (dalphaX[i]*Phi_k + daX[i]*Phi_k*alphaX[i]/aX[i])/(ct*ct*aX[i])
+				+ alphaX[i]*(2*Phi_k/x[i] + dPhi_k)/(ct*ct*aX[i])
+				- alphaX[i]*aX[i]*dV[the_model.nfields*i+k]; // dPi/dN
 
-                        constrerr = (dalpha - (-alpha/(x[i])*(1 + pow(a,2)*(-1 + 8*PI*V[i]
-			        *pow(x[i],2))*pow(ct,2) - x[i]*da))); 
+                        constrerr = (dalphaX[i] - (-alphaX[i]/(x[i])*(1 + pow(aX[i],2)*(-1 + 8*PI*V[i]
+			        *pow(x[i],2))*pow(ct,2) - x[i]*daX[i]))); 
 		}
-                B *= 4*PI*alpha*x[i];
+                B *= 4*PI*alphaX[i]*x[i];
 		dY_out[ny*i+ny-2] = 0; // dalpha/dN
-		dY_out[ny*i+ny-1] = -a*A+B; // da/dN
+		dY_out[ny*i+ny-1] = -aX[i]*A+B; // da/dN
 
-		if (t< .0001) {
-	            LOGMSG("x %0.4e, t %0.4e, constraint error %0.4e", x[i],t ,constrerr);
-		    LOGMSG("Pi %0.4e", y[ny*i+1]);
-		    LOGMSG("dPi %0.4e", dy[ny*i+1]);
-		    LOGMSG("alpha %0.4e", alpha);
-		    LOGMSG("dalpha %0.4e", dalpha);
-		    LOGMSG("a %0.4e", a);
-		    LOGMSG("da %0.4e",da);
-		    LOGMSG("Phi %0.4e", y[i]);
-		    l++;
-		}	    
-                //LOGMSG("y %0.4e, %0.4e, %0.4e, %0.4e",y[i],y[ny*i+1],y[ny*i+ny-2],y[ny*i+ny-1]);
-                //LOGMSG("dy %0.4e, %0.4e, %0.4e, %0.4e",dy[i],dy[ny*i+1],dy[ny*i+ny-2],dy[ny*i+ny-1]);
 	}
 
     free(dy);
@@ -688,8 +683,6 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 	c1 = malloc(sizeof(double)*5*nx);
 	c2 = malloc(sizeof(double)*5*nx);
 	calcDerivCoefs(x, nx, c1, c2);
-        LOGMSG("c1 %0.4e, %0.4e, %0.4e, %0.4e",c1[0],c1[1],c1[2],c1[3]);
-        LOGMSG("x %0.4e, %0.4e, %0.4e, %0.4e",x[0],x[1],x[2],x[3]);
 
 	t = t0;
 	t_write = t0;
@@ -740,7 +733,7 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 			xmin = x0min;
 			xmax = x0max;
 		}
-		
+	
 		m = monitorFunc(t, nx, x, y, c1);
 		if (m == NULL) {
 		        LOGMSG("Error in monitorFunc.");
@@ -749,15 +742,15 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 		xnew = remakeGrid(x, m, nx, gridUniformity, xmin, xmax, &nxnew);
 		free(m);
 		if (xnew == NULL) {
-			LOGMSG("Error in remakeGrid.");
+			LOGMSG("Error in remakeGrid null.");
 			goto out;
 		}
-      /*  for (i=1; i<nxnew; i++) {
-            if (xnew[i] < xnew[i-1]) {
-                LOGMSG("Error in remakeGrid.");
-                goto out;
-            }
-        }*/
+                for (i=1; i<nxnew; i++) {
+                    if (xnew[i] < xnew[i-1]) {
+                        LOGMSG("Error in remakeGrid. dx %0.4e", xnew[i]-xnew[i-1]);
+                        goto out;
+                    }
+                }
 		ynew = interpGrid_scipy(x, nx, y, ny, xnew, nxnew);
 		if (ynew == NULL) {
 			LOGMSG("Error in interpGrid_scipy.");
@@ -788,16 +781,15 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 		c2 = malloc(sizeof(double)*5*nx);
 		calcDerivCoefs(x, nx, c1, c2);
 
-                LOGMSG("c1 %0.4e, %0.4e, %0.4e, %0.4e",c1[0],c1[1],c1[2],c1[3]);
-                LOGMSG("x %0.4e, %0.4e, %0.4e, %0.4e",x[0],x[1],x[2],x[3]);
-		
 		// Make the regions.
 		LOGMSG("Making the regions");
 		dx = malloc(sizeof(double)*nx);
 		mindx = dx[0] = x[1]-x[0];
 		for (i=1; i<nx-1; i++) {
 			dx[i] = 0.5*(x[i+1]-x[i-1]);
-			if (dx[i] < mindx) mindx = dx[i];
+			if (dx[i] < mindx) {
+				mindx = dx[i];
+			}
 		}
 		dx[nx-1] = x[nx-1]-x[nx-2];
 		if (dx[nx-1] < mindx) mindx = dx[nx-1];
@@ -816,6 +808,7 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 			nreg++;
 		}
 		nsteps = pow2N(Nmax);
+		LOGMSG("nsteps %i",nsteps);
 		//dt = mindx * cfl / speedOfLight(t);
 		{
 			// We need to find the maximum speed of light. This sets the minimum time step.
@@ -823,13 +816,13 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 			maxSpeedOfLight = speedOfLight = y[(ny-2)] / y[(ny-1)];
 			for (i=1; i<nx; i++) {
 				speedOfLight = y[ny*i+(ny-2)] / y[ny*i+(ny-1)];
-				if (maxSpeedOfLight < speedOfLight)
+				if (maxSpeedOfLight < speedOfLight) {
 					maxSpeedOfLight = speedOfLight;
+				}
 			}
 			LOGMSG("maxSpeedOfLight: %f", maxSpeedOfLight);
 			maxSpeedOfLight /= cosh(t);
 			dt = mindx * cfl / maxSpeedOfLight;
-			LOGMSG("after mindx dt = %0.3e", dt); 
 		}
 		if (1) {
 			// We also need to figure out the smallest period of oscillation, and make sure the time steps
@@ -844,8 +837,8 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 				dt = osc_period/(nsteps*minStepsPerPeriod);
 			        LOGMSG("after osc per dt = %0.3e", dt); 
 			}
-			LOGMSG("period of oscillations: %f", osc_period);
-			LOGMSG("dt from oscillations: %0.3e", osc_period/(nsteps*minStepsPerPeriod));
+			//LOGMSG("period of oscillations: %f", osc_period);
+			//LOGMSG("dt from oscillations: %0.3e", osc_period/(nsteps*minStepsPerPeriod));
 		}
 		if (1) {
 			// Finally, the step size shouldn't be much smaller than the characteristic change in alpha and a.
@@ -863,8 +856,6 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 			//	LOGMSG("Evolving the regions");
 			if (exactTmax && t + dt*nsteps >= tmax) {
 				dt = (tmax-t)/nsteps;
-			        
-			        LOGMSG("after t max dt = %0.3e", dt); 
 				err = evolveRegions(R0, dt, t, x, nx, nsteps, ny, c1, c2, &dY_bubbles);
 				t = tmax;
 			}
@@ -872,7 +863,6 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 				dt = (t_write-t)/nsteps;
 				err = evolveRegions(R0, dt, t, x, nx, nsteps, ny, c1, c2, &dY_bubbles);
 				t = t_write;
-			        LOGMSG("after t write dt = %0.3e", dt); 
 			}
 			else {
 				err = evolveRegions(R0, dt, t, x, nx, nsteps, ny, c1, c2, &dY_bubbles);
@@ -884,7 +874,7 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 			if (t >= t_write && (fieldsFilePtr || chrisFilePtr) && tout) {
 				free(y);
 				y = dataFromRegions(R0, ny, NULL);
-		//		writeToFile(fieldsFilePtr, nx, ny, xres, t, x, y, c1, c2);
+				//writeToFile(fieldsFilePtr, nx, ny, xres, t, x, y, c1, c2);
 				writeFieldsAndChristoffelsToFile(fieldsFilePtr, chrisFilePtr, nx, xres, t, x, y, c1, c2);
 				// advance t_write
 				if (ntout > 0) {
@@ -976,7 +966,7 @@ void writeFieldsAndChristoffelsToFile(FILE *fFields, FILE *fChris, int32_t nx, i
 */	
     // The potential and its gradient.
 	double *V = malloc(sizeof(double)*nx);
-    double *dV = malloc(sizeof(double)*nx*the_model.nfields);
+        double *dV = malloc(sizeof(double)*nx*the_model.nfields);
 	the_model.V(the_model.obj, nx, ny, y, V);
 	the_model.dV(the_model.obj, nx, ny, y, dV);
 		
@@ -984,24 +974,26 @@ void writeFieldsAndChristoffelsToFile(FILE *fFields, FILE *fChris, int32_t nx, i
 	for (i=0; i<nx; i++) {
 		double alpha = y[ny*i+ny-2];
 		double a = y[ny*i+ny-1];
-		double A = (tt+0.5/tt) - 0.5*alpha*alpha*(1./(ct*st) + 8*PI*tt*V[i]);
+		//double A = (tt+0.5/tt) - 0.5*alpha*alpha*(1./(ct*st) + 8*PI*tt*V[i]);
+		double A = tt;
 		double B = 0.0;
 		double dAdN = 0.0, dBdN = 0.0;
 		
-		double alphaa = alpha/a;
-		double dalphaadx = alphaa*(dydx[ny*i+ny-2]/alpha - dydx[ny*i+ny-1]/a);
-	//	double alphaa = alpha/a;
-	//	double dalphaadx = dalphaadx_arr[i];
+		//double alphaa = alpha/a;
+		//double dalphaadx = alphaa*(dydx[ny*i+ny-2]/alpha - dydx[ny*i+ny-1]/a);
 		
 		for (k=0; k<the_model.nfields; k++) {
 		//	double phi = y[ny*i+k];
 			double Pi = y[ny*i+the_model.nfields+k];
 			double dPidx = dydx[ny*i+the_model.nfields+k];
-			double Phi = dydx[ny*i+k]/ct;
-			double dPhidx = d2ydx2[ny*i+k]/ct;
+			//double Phi = dydx[ny*i+k]/ct;
+			double Phi = dydx[ny*i+k];
+			//double dPhidx = d2ydx2[ny*i+k]/ct;
+			double dPhidx = d2ydx2[ny*i+k];
 			
 			double dphidN = alphaa * Pi;
-			double dPhidN = -tt*Phi + (Pi*dalphaadx + dPidx*alphaa)/ct;
+			//double dPhidN = -tt*Phi + (Pi*dalphaadx + dPidx*alphaa)/ct;
+			double dPhidN = 0.0; //should input actual value
 			double dPidN = -(tt+2.0/tt)*Pi + (dalphaadx*Phi + alphaa*dPhidx)/ct - alpha*a*dV[the_model.nfields*i+k];
 
 			B += Phi*Phi + Pi*Pi;

@@ -563,7 +563,6 @@ double *remakeGrid(double *x, double *grid_density, int nx, double grid_uniformi
 	if (xmax > x[nx-1])
 		npts_d += (xmax-x[nx-1]) * m[nx-1];
 	*nx_out = npts = (int)(ceil(npts_d));
-	LOGMSG("npts: %i, %0.4e", npts, npts_d);
 	if (npts <= 0)
 		return NULL;
 		
@@ -578,7 +577,6 @@ double *remakeGrid(double *x, double *grid_density, int nx, double grid_uniformi
 		dx = 1./m[0];
 		for (i=1; i < msum; i++) {
 			xnew[i] = xnew[i-1]+dx;
-	//		LOGMSG("%i: xnew=%0.3f", i, xnew[i]);
 		}
 	}
 	for (j=1; j<nx; j++) {
@@ -592,12 +590,13 @@ double *remakeGrid(double *x, double *grid_density, int nx, double grid_uniformi
 			while (msum2 > i && i < npts) {
 				c = i-msum;
 				d = a*c/(b*b);
-				if (abs(d) < 1e-5) // Approximate using a taylor series.
+				if (fabs(d) < 1e-5) {// Approximate using a taylor series.
 					dx = c/b * (1 + d*(-1+d*(2-5*d)));
-				else
+				}
+				else {
 					dx = 0.5*b*(-1+sqrt(1+4*d))/a;
+				}
 				xnew[i] = x[j-1]+dx;
-		//		LOGMSG("%i: xnew=%0.3f", i, xnew[i]);
 				i++;
 			}
 		}
