@@ -9,8 +9,8 @@ inFile = sys.argv[1]
 data = simulation.readFromFile(inFile)
 
 Ndata = np.array([d[0] for d in data])
-x = np.linspace(0.006, 1.004, 500)
-N_list = np.linspace(0.0,.004,100)
+x = np.linspace(0.01, 0.500, 100)
+N_list = np.linspace(0.0,.1,40)
 
 phi=[]
 alphaa = []
@@ -28,15 +28,18 @@ for i in range(len(N_list)):
     alphaa.append(Y[:,0,2])
     aa.append(Y[:,0,3])
 
-plt.contourf(x,N_list,phi,10,cmap='RdGy')
+plt.contourf(x,N_list,phi,20,cmap='RdGy')
 plt.colorbar()
+plt.xscale('log');
 plt.savefig("phi_contour.pdf")
 plt.figure()
-plt.contourf(x,N_list,alphaa,10,cmap='RdGy')
+plt.contourf(x,N_list,alphaa,20,cmap='RdGy')
 plt.colorbar()
+plt.xscale('log');
 plt.savefig("alpha_contour.pdf")
 plt.figure()
-plt.contourf(x,N_list,aa,10,cmap='RdGy')
+plt.contourf(x,N_list,aa,20,cmap='RdGy')
 plt.colorbar()
+plt.xscale('log');
 plt.savefig("a_contour.pdf")
 

@@ -625,6 +625,10 @@ int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, d
 
     free(dy);
     free(d2y);
+    free(alphaX);
+    free(dalphaX);
+    free(aX);
+    free(daX);
     free(V);
     free(dV);
 
@@ -958,12 +962,18 @@ void writeFieldsAndChristoffelsToFile(FILE *fFields, FILE *fChris, int32_t nx, i
 	double *dydN = malloc(sizeof(double)*nx*ny);
 	double *d2alphadN2_arr = malloc(sizeof(double)*nx);
 	double *d2adN2_arr = malloc(sizeof(double)*nx);
-	
-/*	double alphaa_arr[nx], dalphaadx_arr[nx];
-	for (i=0; i<nx; i++)
-		alphaa_arr[i] = y[i*ny+ny-2]/y[i*ny+ny-1];
-	calcDerivs(alphaa_arr, c1, nx, 1, 0, dalphaadx_arr, 1, 0);
-*/	
+	double *alphaX = malloc(sizeof(double)*nx);
+	double *dalphaX = malloc(sizeof(double)*nx);
+        double *aX = malloc(sizeof(double)*nx);
+	double *daX = malloc(sizeof(double)*nx);
+
+	for (i=0; i<nx; i++) {
+		alphaX[i] = y[ny*i+(ny-2)];
+		aX[i] = y[ny*i+ny-1];
+        }
+	calcDerivs(alphaX, c1, nx, 1, 0, dalphaX, 1, 0);
+	calcDerivs(aX, c1, nx, 1, 0, daX, 1, 0);
+
     // The potential and its gradient.
 	double *V = malloc(sizeof(double)*nx);
         double *dV = malloc(sizeof(double)*nx*the_model.nfields);
@@ -972,8 +982,6 @@ void writeFieldsAndChristoffelsToFile(FILE *fFields, FILE *fChris, int32_t nx, i
 		
 	// Start calculating dY_out
 	for (i=0; i<nx; i++) {
-		double alpha = y[ny*i+ny-2];
-		double a = y[ny*i+ny-1];
 		//double A = (tt+0.5/tt) - 0.5*alpha*alpha*(1./(ct*st) + 8*PI*tt*V[i]);
 		double A = tt;
 		double B = 0.0;
@@ -991,19 +999,24 @@ void writeFieldsAndChristoffelsToFile(FILE *fFields, FILE *fChris, int32_t nx, i
 			//double dPhidx = d2ydx2[ny*i+k]/ct;
 			double dPhidx = d2ydx2[ny*i+k];
 			
-			double dphidN = alphaa * Pi;
+			double dphidN = alphaX[i]/aX[i] * Pi;
 			//double dPhidN = -tt*Phi + (Pi*dalphaadx + dPidx*alphaa)/ct;
 			double dPhidN = 0.0; //should input actual value
-			double dPidN = -(tt+2.0/tt)*Pi + (dalphaadx*Phi + alphaa*dPhidx)/ct - alpha*a*dV[the_model.nfields*i+k];
+			//double dPidN = -(tt+2.0/tt)*Pi + (dalphaadx*Phi + alphaa*dPhidx)/ct - alpha*a*dV[the_model.nfields*i+k];
+			double dPidN = -tt*Pi
+				+ (dalphaX[i]*Phi + daX[i]*Phi*alphaX[i]/aX[i])/(ct*ct*aX[i])
+				+ alphaX[i]*(2*Phi/x[i] + dPhidx)/(ct*ct*aX[i])
+				- alphaX[i]*aX[i]*dV[the_model.nfields*i+k];
 
-			B += Phi*Phi + Pi*Pi;
+			//B += Phi*Phi + Pi*Pi;
+			B += Pi*Phi;
 			dAdN += dV[the_model.nfields*i+k]*dphidN;
 			dBdN += dPhidN*Phi + dPidN*Pi;
 			
 			dydN[ny*i+k] = dphidN;
 			dydN[ny*i+the_model.nfields+k] = dPidN;
 		}
-		dAdN *= 8*PI*tt;
+		/*dAdN *= 8*PI*tt;
 		dAdN += 8*PI*V[i]/(ct*ct);
 		dAdN -= 1./(ct*ct) + 1./(st*st);
 		dAdN *= - 0.5*alpha*alpha;
@@ -1011,17 +1024,20 @@ void writeFieldsAndChristoffelsToFile(FILE *fFields, FILE *fChris, int32_t nx, i
 		double PiTanhAlphaA2 = PI*tt*alphaa*alphaa;
 		dBdN *= 4*PiTanhAlphaA2;
 		dBdN += 8*PiTanhAlphaA2*B*A; // where 2*A = dalphadN/alpha - dadN/a
-		dBdN += (2*PI/(ct*ct))*alphaa*alphaa*B;
-		B *= 2*PiTanhAlphaA2;
+		dBdN += (2*PI/(ct*ct))*alphaa*alphaa*B;*/
+		//B *= 2*PiTanhAlphaA2;
+		B *= 4*PI*alphaX[i]*x[i];
 
-		double dalphadN = alpha*(A+B);
-		double dadN = a*(-A+B);
+		//double dalphadN = alpha*(A+B);
+		double dalphadN = 0;
+		//double dadN = a*(-A+B);
+		double dadN = aX[i]*(-A)+B;
 		dydN[ny*i+ny-2] = dalphadN;
 		dydN[ny*i+ny-1] = dadN;
 		
-		dAdN += (1./(ct*ct) - 0.5/(st*st)) - alpha*dalphadN*(1./(ct*st) + 8*PI*tt*V[i]);
-		d2alphadN2_arr[i] = dalphadN*(A+B) + alpha*(dAdN+dBdN);
-		d2adN2_arr[i] = dadN*(-A+B) + a*(-dAdN+dBdN);
+		//dAdN += (1./(ct*ct) - 0.5/(st*st)) - alpha*dalphadN*(1./(ct*st) + 8*PI*tt*V[i]);
+		//d2alphadN2_arr[i] = dalphadN*(A+B) + alpha*(dAdN+dBdN);
+		//d2adN2_arr[i] = dadN*(-A+B) + a*(-dAdN+dBdN);
 	}	
 	
 	// Get the mixed space/time derivs.
@@ -1030,7 +1046,7 @@ void writeFieldsAndChristoffelsToFile(FILE *fFields, FILE *fChris, int32_t nx, i
 		calcDerivs(dydN, c1, nx, ny, k, d2ydNdx, ny, k);
 	
 	double *G = malloc(sizeof(double)*nx*6);
-    double *dGdN = malloc(sizeof(double)*nx*6);
+        double *dGdN = malloc(sizeof(double)*nx*6);
 	// Now calculate the Christoffel symbols.
 	for (i=0; i<nx; i++) {
 		int ialpha = ny*i+ny-2;
@@ -1065,8 +1081,8 @@ void writeFieldsAndChristoffelsToFile(FILE *fFields, FILE *fChris, int32_t nx, i
 	}
 	
 	// And calculate the spatial derivs of the Christoffels.
-    double *dGdx = malloc(sizeof(double)*6*nx);
-    double *d2GdNdx = malloc(sizeof(double)*6*nx);
+        double *dGdx = malloc(sizeof(double)*6*nx);
+        double *d2GdNdx = malloc(sizeof(double)*6*nx);
 	for (k=0; k<6; k++) {
 		calcDerivs(G, c1, nx, 6, k, dGdx, 6, k);
 		calcDerivs(dGdN, c1, nx, 6, k, d2GdNdx, 6, k);
@@ -1164,6 +1180,10 @@ void writeFieldsAndChristoffelsToFile(FILE *fFields, FILE *fChris, int32_t nx, i
     free(dydx);
     free(d2ydx2);
     free(dydN);
+    free(alphaX);
+    free(dalphaX);
+    free(aX);
+    free(daX);
     free(d2alphadN2_arr);
     free(d2adN2_arr);
     free(V);
