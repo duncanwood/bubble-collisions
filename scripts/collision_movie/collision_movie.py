@@ -17,14 +17,14 @@ inFile = sys.argv[1]
 data = simulation.readFromFile(inFile)
 
 Ndata = np.array([d[0] for d in data])
-x = np.linspace(-4.9, 4.9, 5000)
-N_list = np.linspace(0.0,4.0,framerate*duration)
+x = np.linspace(0.01, 0.500, 100)
+N_list = np.linspace(0.0,0.1,framerate*duration)
 
 fig = plt.figure()
 ax1 = plt.subplot(211)
 ax2 = plt.subplot(212)
 
-with writer.saving(fig, "collision_movie.mp4", 160):
+with writer.saving(fig, "collision_movie_1D.mp4", 160):
     for N in N_list:
         Y=simulation.valsOnGrid(
             N*np.ones_like(x),x, data, [d[0] for d in data], False)
@@ -36,7 +36,7 @@ with writer.saving(fig, "collision_movie.mp4", 160):
         ax1.plot(x2,y, 'b', lw=1.5)
         ax1.set_ylabel(r"Inflaton field values ($M_{\rm Pl}$)")
         ax1.axis(xmin=x2[0],xmax=x2[-1], 
-            ymin=-.002, ymax=.02)
+            ymin=-y[-1]*1.2, ymax=y[0]*1.2)
         ax1.text(.85, .9, "$N=%0.2f$"%N, ha='left', va='center', 
             transform=ax1.transAxes)
         ax1.set_xticklabels([])

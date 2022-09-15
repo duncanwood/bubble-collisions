@@ -285,7 +285,7 @@ int init_test_model_type() {
 #pragma mark --Tilted hat
 
 // A tilted hat model with a two-field potential
-// from arxiv:2001.09160
+// from arxiv:2001.09160 with a constant offset "h"
 
 typedef struct {
     ModelObject base;
@@ -294,6 +294,8 @@ typedef struct {
     double c;
     double g;
     double f;
+    double h;
+    double j;
 } TiltedHatObject;
 
 static int tilted_hat_V(
@@ -306,7 +308,7 @@ static int tilted_hat_V(
         double phi2 = y_in[i*ny+1];
         y_out[i] = pow(self->m,2)*(pow(phi1,2) + pow(phi2,2)) - 
                     self->a*pow(pow(phi1,2) + pow(phi2,2),2) + 
-                    self->c*pow(pow(phi1,2) + pow(phi2,2),3) + self->g*sin(phi1*pow(self->f,-1));
+                    self->c*pow(pow(phi1,2) + pow(phi2,2),3) + self->g*sin(phi1*pow(self->f,-1)) + self->j*sin(phi2*pow(self->f,-1)) + self->h;
     }
     return 0;
 }
@@ -322,7 +324,7 @@ static int tilted_hat_dV(
         y_out[2*i] = self->g*cos(phi1*pow(self->f,-1))*pow(self->f,-1) + 2*phi1*pow(self->m,2) - 
                          4*self->a*phi1*(pow(phi1,2) + pow(phi2,2)) + 
                          6*self->c*phi1*pow(pow(phi1,2) + pow(phi2,2),2);
-        y_out[2*i+1] = 2*phi2*pow(self->m,2) - 4*self->a*phi2*(pow(phi1,2) + pow(phi2,2)) + 
+        y_out[2*i+1] = self->j*cos(phi2*pow(self->f,-1))*pow(self->f,-1) + 2*phi2*pow(self->m,2) - 4*self->a*phi2*(pow(phi1,2) + pow(phi2,2)) + 
                          6*self->c*phi2*pow(pow(phi1,2) + pow(phi2,2),2);
     }
     return 0;
@@ -330,9 +332,9 @@ static int tilted_hat_dV(
 
 static int tilted_hat_init(TiltedHatObject* self, PyObject *args, 
                              PyObject *keywds) {
-    static char *kwlist[] = {"m","a","c","g","f",NULL};
+    static char *kwlist[] = {"m","a","c","g","f","h","j",NULL};
     int success = PyArg_ParseTupleAndKeywords(
-        args, keywds, "ddd", kwlist, &self->m, &self->a, &self->c, &self->g, &self->f);
+        args, keywds, "ddddddd", kwlist, &self->m, &self->a, &self->c, &self->g, &self->f, &self->h, &self->j);
     if (!success) return -1;
     self->base.V = (ScalarFunc)tilted_hat_V;  
     self->base.dV = (ScalarFunc)tilted_hat_dV;
@@ -345,7 +347,7 @@ static PyTypeObject tilted_hat_type = {
 };
 
 static const char *tilted_hat_docstring = 
-"TiltedHat(m, a, c, g, f)\n"
+"TiltedHat(m, a, c, g, f, h, j)\n"
 "\n"
 "A tilted hat model with two scalar fields.\n"
 "From arxiv:2001.09160\n";
@@ -824,6 +826,8 @@ initmodels(void)
         PyModule_AddObject(module, "ModelObject", (PyObject *)&model_object_type);
     if(init_test_model_type() >= 0)
         PyModule_AddObject(module, "TestModel", (PyObject *)&test_model_type);
+    if(init_tilted_hat_type() >= 0)
+        PyModule_AddObject(module, "TiltedHat", (PyObject *)&tilted_hat_type);
     if(init_genericPiecewise_noHilltop_type() >= 0)
         PyModule_AddObject(module, "GenericPiecewise_NoHilltop_Model", 
             (PyObject *)&genericPiecewise_noHilltop_type);

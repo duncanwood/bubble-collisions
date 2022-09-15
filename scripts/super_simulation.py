@@ -11,9 +11,9 @@ def runScript(res, fname, xsep=1.0):
     The 'res' input parameter specifies the overall resolution relative
     to the default value that was used for the collision_pheno paper.
     """
-    mu = 0.01
-    omega = 0.001
-    Delta_phi = 0.000793447464875
+    mu = 0.05
+    omega = 0.1
+    Delta_phi = 0.001
     phi_vac = 3.0
     
     model = models.GenericPiecewise_NoHilltop_Model(
@@ -39,28 +39,30 @@ def runScript(res, fname, xsep=1.0):
     inst = dict(r=r, phi=phi, dphi=dphi)
     inst1 = inst2 = inst
     
+    
     plt.plot(r,phi)
     plt.title("phi(r)")
-    plt.savefig("phi_r.pdf")
+    plt.savefig("phi_r.png")
     plt.figure()
     plt.plot(phi,V(phi))
     plt.title("V(phi)")
-    plt.savefig("V_phi.pdf")
-
+    plt.savefig("V_phi.png")
+    
     model.setParams(phi0=phi_vac)
     # At first, the output should be kind of coarse.
     simulation.setModel(model)
-    tfix = .10
-    simulation.setFileParams(fname, xres=2, tout=tfix/100.)
+    tfix = 1.0
+    simulation.setFileParams(fname, xres=2, tout=tfix/1000.)
     simulation.setIntegrationParams(mass_osc = dV(phi_vac+.01)/.01)
     t0,x0,y0 = collisionRunner.calcInitialDataFromInst(
-        model, inst1, None, phiF, xsep=1.0, xmin=0.01, xmax=0.5)
+        model, inst1, None, phiF, xsep=1.0, xmin=0.01, xmax=1.0)
     simulation.setMonitorCallback(
-        collisionRunner.monitorFunc1D(50., 250., 1))
+        collisionRunner.monitorFunc1D(40., 200., 1))
 
     t, x, y = simulation.runCollision(x0,y0,t0,tfix, growBounds=False)
     if (t < tfix*.9999):
-        raise RuntimeError("Didn't reach tfix. Aborting.")
+       raise RuntimeError("Didn't reach tfix. Aborting.")
+
 """
     # Truncate the simulation
     truncation = .95
@@ -71,7 +73,7 @@ def runScript(res, fname, xsep=1.0):
     x,y = x[i], y[i]
 
     # t_start and t_end should encompass the phi=1.5 surface (which is the 
-    # surface that I used before to calculate full-sky bubbles).
+    u surface that I used before to calculate full-sky bubbles).
     t_start_hr_out = 42.0
     t_end_hr_out = 47.0
     t,x,y = simulation.runCollision(x,y,t,t_start_hr_out, 
@@ -184,9 +186,9 @@ if __name__ == "__main__":
         fname = fname_base+"_%i.dat" % res
     else:
         fname = fname_base+"_%s.dat" % res
-    if args.non_ident:
-        runNonIdentScript(res, fname)
-    else:
-        runScript(res, fname)
+    #if args.non_ident:
+    #    runNonIdentScript(res, fname)
+    #else:
+    runScript(res, fname)
 
 

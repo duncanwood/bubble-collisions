@@ -419,9 +419,10 @@ PyObject *runCollision(PyObject *self, PyObject *args, PyObject *keywds) {
     }
     xdims = PyArray_DIMS((PyArrayObject *)Xin);
     ydims = PyArray_DIMS((PyArrayObject *)Yin);
+    //if (xdims[0] != ydims[0] || ydims[1] != 2*the_model.nfields+2) {
     if (xdims[0] != ydims[0] || ydims[1] != 2*the_model.nfields+2) {
     	PyErr_SetString(PyExc_ValueError, 
-    		"Input arrays must have shape(x) = (nx,) and shape(y) = (nx, 2*nfields+2).");
+    		"Input arrays must have shape(x) = (nx,) and shape(y) = (nx, 2*nfields+3).");
     	Py_XDECREF(Xin); Py_XDECREF(Yin); return NULL;
     }
 	nx = xdims[0];
@@ -517,13 +518,14 @@ double *monitorFunc(double t, int nx, double *x, double *y, double *c1) {
 	int k, ny;
 
 	m = malloc(sizeof(double)*nx);
-	
+
 	// Need to calculate dy.
-	ny = the_model.nfields*2 + 2;
+    ny = the_model.nfields*2 + 2;
+	//ny = the_model.nfields*2 + 3;
 	for (k=0; k<the_model.nfields; k++) {
 		calcDerivs(y, c1, nx, ny, k, dydx, the_model.nfields, k);
 		for (int i=0; i<nx; i++) {
-		    if (isnan(dydx[i])) {LOGMSG("y, c1, dydx %0.4e %0.4e %0.4e", y[i], c1[i], dydx[i]);}
+		    if (isnan(dydx[i])) {LOGMSG("k, x, y, c1, dydx, m: %i %0.4e %0.4e %0.4e %0.4e %0.4e", k, x[i], y[i], c1[i], dydx[i], m[i]);}
 		}
 	}
 
@@ -564,6 +566,7 @@ int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, d
 	double ct, st, tt; // hyperbolic functions
 	
 	ny = 2*the_model.nfields+2;
+	//ny = 2*the_model.nfields+3;
 	
 	ct = cosh(t);
 	st = sinh(t);
@@ -572,11 +575,14 @@ int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, d
 	// calculate the spatial derivs.
 	double *dy = malloc(sizeof(double)*nx*the_model.nfields);
 	double *d2y = malloc(sizeof(double)*nx*the_model.nfields);
-        double *alphaX = malloc(sizeof(double)*nx);
+    double *alphaX = malloc(sizeof(double)*nx);
 	double *dalphaX = malloc(sizeof(double)*nx);
-        double *aX = malloc(sizeof(double)*nx);
+    double *aX = malloc(sizeof(double)*nx);
 	double *daX = malloc(sizeof(double)*nx);
-
+	double *d2aX = malloc(sizeof(double)*nx);
+	double *bX = malloc(sizeof(double)*nx);
+    double *dbX = malloc(sizeof(double)*nx);
+        
 	for (k=0; k<the_model.nfields; k++) {
 		calcDerivs(y, c1, nx, ny, k, dy, the_model.nfields, k);
 		calcDerivs(y, c2, nx, ny, k, d2y, the_model.nfields, k);
@@ -585,41 +591,47 @@ int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, d
 	for (i=0; i<nx; i++) {
 		alphaX[i] = y[ny*i+(ny-2)];
 		aX[i] = y[ny*i+ny-1];
+		//bX[i] = y[ny*i+ny-3];
         }
+
 	calcDerivs(alphaX, c1, nx, 1, 0, dalphaX, 1, 0);
 	calcDerivs(aX, c1, nx, 1, 0, daX, 1, 0);
+	calcDerivs(aX, c2, nx, 1, 0, d2aX, 1, 0); //diff btwn c1 and c2 ?
+	//calcDerivs(bX, c1, nx, 1, 0, dbX, 1, 0);
 
 	// Calculate the potential and its gradient
 	int errcode;
         // The potential and its gradient.
-	double *V = malloc(sizeof(double)*nx);
-        double *dV = malloc(sizeof(double)*nx*the_model.nfields);
+	double *V = malloc(sizeof(double)*nx*the_model.nfields);
+    double *dV = malloc(sizeof(double)*nx*the_model.nfields);
 	errcode = the_model.V(the_model.obj, nx, ny, y, V);
 	if (errcode < 0) return errcode;
 	errcode = the_model.dV(the_model.obj, nx, ny, y, dV);
 	if (errcode < 0) return errcode;
 	// Start calculating dY_out
 	for (i=0; i<nx; i++) {
-		double A, B, constrerr;
-		A = tt;
-		B = 0.0;
+		double A, B;
+		A = -x[i]*daX[i]*daX[i]+2*aX[i]*(2*daX[i]+x[i]*d2aX[i]);
+		B = 0;
 		for (k=0; k<the_model.nfields; k++) {
 			double Pi_k = y[ny*i+the_model.nfields+k];
-			double Phi_k = dy[the_model.nfields*i+k];
 			double dPhi_k = d2y[the_model.nfields*i+k];
-                        B += Pi_k*Phi_k;
+			double Phi_k = dy[the_model.nfields*i+k];
+			double Pi_oth = y[ny*i+the_model.nfields+(k+1 % the_model.nfields)];
+			double Phi_oth = dy[the_model.nfields*i+(k+1 % the_model.nfields)];
+			A += 4*PI*x[i]*pow(aX[i],4)*V[the_model.nfields*i+k]+4*PI*x[i]*aX[i]*aX[i]*(Pi_k*Pi_k+Phi_k*Phi_k);
 			dY_out[ny*i+k] = alphaX[i]/aX[i]*Pi_k; // dphi/dN
-			dY_out[ny*i+the_model.nfields+k] = -tt*Pi_k
-				+ (dalphaX[i]*Phi_k + daX[i]*Phi_k*alphaX[i]/aX[i])/(ct*ct*aX[i])
-				+ alphaX[i]*(2*Phi_k/x[i] + dPhi_k)/(ct*ct*aX[i])
-				- alphaX[i]*aX[i]*dV[the_model.nfields*i+k]; // dPi/dN
-
-                        constrerr = (dalphaX[i] - (-alphaX[i]/(x[i])*(1 + pow(aX[i],2)*(-1 + 8*PI*V[i]
-			        *pow(x[i],2))*pow(ct,2) - x[i]*daX[i]))); 
+			dY_out[ny*i+the_model.nfields+k] = 1/(3*x[i]*aX[i]*aX[i])
+			    *(-3*x[i]*pow(aX[i],3)*alphaX[i]*dV[the_model.nfields*i+k]
+				+ 3*x[i]*alphaX[i]*Phi_k*daX[i] + 3*aX[i]*(x[i]*Phi_k*dalphaX[i]
+				+ alphaX[i]*(2*Phi_k + x[i]*dPhi_k)) - 2*pow(3*x[i],1/2)*alphaX[i]*Pi_k*pow(8*PI*x[i]*pow(aX[i],4)*V[the_model.nfields*i+k]
+				+ 4*PI*x[i]*aX[i]*aX[i]*(Pi_k*Pi_k + Pi_oth*Pi_oth + Phi_k*Phi_k + Phi_oth*Phi_oth)
+				-x[i]*daX[i]*daX[i] + 2*aX[i]*(2*daX[i] + x[i]*d2aX[i]),1/2)); // dPi/dN
 		}
-                B *= 4*PI*alphaX[i]*x[i];
+		A = alphaX[i]/(pow(3*x[i],1/2)*aX[i])*pow(A,1/2); // add extra fields inside sqrt above 
+		dY_out[ny*i+ny-1] = A; // da/dN
 		dY_out[ny*i+ny-2] = 0; // dalpha/dN
-		dY_out[ny*i+ny-1] = -aX[i]*A+B; // da/dN
+		//dY_out[ny*i+ny-3] = 0; // db/dN
 
 	}
 
@@ -629,6 +641,9 @@ int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, d
     free(dalphaX);
     free(aX);
     free(daX);
+    free(d2aX);
+    free(bX);
+    free(dbX);
     free(V);
     free(dV);
 
@@ -660,6 +675,7 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 		// you'd have the problem that solution in the fine regions could evolve into
 		// the coarse regions before we have a chance to re-adapt the grid.)
 	ny = 2*the_model.nfields+2;
+	//ny = 2*the_model.nfields+3;
 	nx = nx0;
 
 	fieldsFilePtr = fname ? fopen(fname, overwritefile ? "w" : "a") : NULL;
@@ -807,7 +823,7 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 		nreg = 0;
 		while (R) {
 			if (R->N > Nmax) Nmax = R->N;
-			//		LOGMSG("a region, N=%i", R->N);
+			//LOGMSG("a region, N=%i", R->N);
 			R = R->nextReg;
 			nreg++;
 		}

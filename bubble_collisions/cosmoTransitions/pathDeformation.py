@@ -862,7 +862,7 @@ def fullTunneling(path_pts, V, dV, maxiter=20, fixEndCutoff=.03,
         (or near) the lower minimum (the minimum to which the field is
         tunneling), and the last point should be at the metastable minimum.
     V, dV : callable
-        The potential function and its gradient. Both should accept input of
+        The potential function and itfullTs gradient. Both should accept input of
         shape ``(num_points, N_dim)`` and shape ``(N_dim,)``. 
     maxiter : int, optional
         Maximum number of allowed deformation / tunneling iterations.
@@ -946,7 +946,7 @@ def fullTunneling(path_pts, V, dV, maxiter=20, fixEndCutoff=.03,
         if verbose: print("Starting tunneling step %i" % num_iter)
         # 1. Fit the spline to the path.
         path = SplinePath(pts, V, dV, V_spline_samples=V_spline_samples,
-                          extend_to_minima=True)
+                          extend_to_minima=True, reeval_distances=False)
         # 2. Do 1d tunneling along the path.
         if V_spline_samples is not None:
             tobj = tunneling_class(0.0, path.L, path.V, path.dV, path.d2V, 

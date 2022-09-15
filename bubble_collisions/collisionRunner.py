@@ -13,12 +13,13 @@ All of the rest can be handled by the default arguments.
 """
 
 import numpy as np
+np.set_printoptions(threshold=np.inf)
 from scipy import interpolate
-from scipy import integrate
 
 from .derivsAndSmoothing import deriv14, deriv23
 from . import simulation
 import matplotlib.pyplot as plt
+from scipy.integrate import odeint
 
 def timeSlicesForShockParams(
 		xsep, obs_inst_radius, col_wall_inner, col_wall_outer, 
@@ -203,13 +204,13 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 			The initial time value.
 		x : array of length nx
 			The initial grid.
-		Y : array of shape ``(nx, 2*nfields+2)``
+		Y : array of shape ``(nx, 2*nfields+3)``
 			The initial field values :math:`\\phi`, their rescaled momenta
 			:math:`\\Pi`, and the initial metric functions :math:`\\alpha` and
-			:math:`a`.
+			:math:`a`. and b
 	"""
 	phiF = np.array(phiF).ravel() 
-		# so that we can just input a number when there's only 1 field
+	# so that we can just input a number when there's only 1 field
 
 	# First, make the instantons two-sided.
 	inst1 = makeTwoSidedInstanton(inst1, phiF)
@@ -230,7 +231,8 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	y = np.zeros((len(x), len(phiF)), dtype=float) + phiF
 	dy = np.zeros((len(x), len(phiF)), dtype=float)
 	d2y = np.zeros((len(x), len(phiF)), dtype=float)
-	xT = np.zeros((len(x), len(phiF)), dtype=float)
+	#xT = np.zeros((len(x), len(phiF)), dtype=float)
+
 	if inst1:
 		tck = interpolate.splprep(inst1['phi'].T, u=inst1['x'], s=0)[0]
 		dtck = interpolate.splprep(inst1['dphi'].T, u=inst1['x'], s=0)[0]
@@ -258,68 +260,98 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	t0 = rel_t0 * inst1["x"][-1]
 	if (inst2):
 		t0 = min(t0, rel_t0 * inst2["x"][-1])
+
 	#A = -.5 + 4*np.pi*V(y)/3
 	#B = 2*np.pi*np.sum(dy*dy, axis=1)/3
 	#C = (1./6) * (d2y - dV(y))
 	#A = B = C = 0 # NEED TO REMOVE THIS
-      
-        Vinterp = interpolate.interp1d(x, V(y),fill_value="extrapolate")
-        dVinterp = interpolate.interp1d(x, dV(y).T[0],fill_value="extrapolate")
-        yinterp = interpolate.interp1d(x, y.T[0],fill_value="extrapolate")
-        dyinterp = interpolate.interp1d(x, dy.T[0],fill_value="extrapolate")
-        d2yinterp = interpolate.interp1d(x, d2y.T[0],fill_value="extrapolate")
+    
+	Vinterp = interpolate.interp1d(x, V(y),fill_value="extrapolate")
+	dVinterp = interpolate.interp1d(x, dV(y).T[0],fill_value="extrapolate")
+	yinterp = interpolate.interp1d(x, y.T[0],fill_value="extrapolate")
+	dyinterp = interpolate.interp1d(x, dy.T[0],fill_value="extrapolate")
+	d2yinterp = interpolate.interp1d(x, d2y.T[0], fill_value="extrapolate")
+	if len(phiF) > 1:
+		dV2interp = interpolate.interp1d(x, dV(y).T[1],fill_value="extrapolate")
+		y2interp = interpolate.interp1d(x, y.T[1],fill_value="extrapolate")
+		dy2interp = interpolate.interp1d(x, dy.T[1],fill_value="extrapolate")
+		d2y2interp = interpolate.interp1d(x, d2y.T[1],fill_value="extrapolate")
+	
+	plt.figure()
+	plt.plot(x,Vinterp(x),'r')
+	plt.savefig("V_x.pdf")
+	plt.figure()
 
-        #Only works for 1 scalar easy change just add more
-        def diffEQa(a, xi):
-            return 1/(2*xi)*a*(1 - a**2 + 8*np.pi*xi**2*a**2*Vinterp(xi) + 4*np.pi*xi**2*dyinterp(xi)**2)
-        ainit = 1
-        asol = integrate.odeint(diffEQa,ainit,x)
-        ainterp = interpolate.interp1d(x,asol.T[0],fill_value="extrapolate") 
+    #w = [a0, a1, alpha, da0/dx, da1/dx, dalpha/dx]
+	def diffeq(w, r):
+		da0dx = w[3]
+		d2a0dx2 = (3*r*w[0]**2*w[1]**2 - 4*np.pi*r*dyinterp(r)**2*w[0]**2*w[2]**2 
+		- 4*np.pi*r*dy2interp(r)**2*w[0]**2*w[2]**2
+		- 8*np.pi*Vinterp(r)*r*w[0]**4*w[2]**2 - 4*w[0]*w[2]**2*w[3]
+		+ r*w[2]**2*w[3]**2)/(2*r*w[0]*w[2]**2)
+		dalphdx = w[5]
+		d2alphdx2 = (1/(r*w[0]**2))*(-8*np.pi*r*dyinterp(r)**2*w[0]**2*w[2] 
+		- 8*np.pi*r*dy2interp(r)**2*w[0]**2*w[2] + w[0]*w[2]*w[3] 
+		+ 2*r*w[2]*w[3]**2 + w[0]**2*w[5] + 2*r*w[0]*w[3]*w[5] 
+		- r*w[0]*w[2]*d2a0dx2)
+		da1dx = w[4]
+		d2a1dx2 = (-w[1]**2*w[2]*w[3]**2 + w[0]**2*w[2]*w[4]**2 
+		+ w[0]*w[1]**2*w[3]*w[5] - w[0]**2*w[1]*w[4]*w[5] 
+		+ w[0]*w[1]**2*w[2]*d2a0dx2 + w[0]**2*w[1]**2*d2alphdx2)/(w[0]**2*w[1]*w[2])
+		dwdx = [da0dx, da1dx, dalphdx, d2a0dx2, d2a1dx2, d2alphdx2]
+		print(dwdx)
+		return dwdx
 
-        def diffEQalph(alph, xi):
-            return -(alph*(ainterp(xi) + ainterp(xi)**3*(-1 + 8*np.pi*xi**2*Vinterp(xi)) - xi*diffEQa(ainterp(xi),xi)))/(xi*ainterp(xi)) 
-         
-        alphinit = 1
-        alphsol = integrate.odeint(diffEQalph,alphinit,x)
-        alphinterp = interpolate.interp1d(x,alphsol.T[0],fill_value="extrapolate")
+	winit = [1.0, 1e-3, 1.0, 0.0, 0.0, 0.0]
+	wsoln = odeint(diffeq, winit, x)
 
-        a0 = asol.T[0]
-        alpha0 = alphsol.T[0]
-        a0ana =np.ones(len(x))+x**2*4*np.pi*Vinterp(x[-1])/3
-        alph0ana =np.ones(len(x))-x**2*4*np.pi*Vinterp(x[-1])/3
+	plt.figure()
+	plt.plot(x, wsoln[:,0], 'b')
+	plt.plot(x, wsoln[:,1], 'r')
+	plt.plot(x, wsoln[:,2], 'g')
+	plt.ylim(-2,10)
+	plt.savefig("initial.pdf")
+	plt.figure()
+	plt.plot(x, wsoln[:,3], 'b')
+	plt.plot(x, wsoln[:,4], 'r')
+	plt.plot(x, wsoln[:,5], 'g')
+	plt.ylim(-1.0,1.0)
+	plt.savefig("initial_prime.pdf")
 
-        plt.figure()
-        plt.plot(x,asol.T[0],'b',label='a')
-        plt.plot(x,alphsol.T[0],'g',label='alpha')
-        plt.plot(x,a0ana,'b--',label='a analytic')
-        plt.plot(x,alph0ana,'g--',label='alpha analytic')
-        plt.legend()
-        plt.xlabel('x')
-        plt.savefig("a_alpha_x.pdf")
+	print(wsoln[:,0])
 
-        plt.figure()
-        plt.plot(x,Vinterp(x),'r')
-        plt.savefig("V_x.pdf")
-
-	phi2 = -(alpha0*(x*alpha0*diffEQa(ainterp(x),x)*dyinterp(x) 
-        - a0*(x*diffEQalph(alphinterp(x),x)*dyinterp(x) + alpha0*(2*dyinterp(x) + x*d2yinterp(x))) 
-        + x*a0**3*alpha0*dVinterp(x)*yinterp(x)))/(2*x*a0**3)
-        a2 = 1/2*(-a0-8*np.pi*x*a0*phi2*dyinterp(x))
-
-        phi2T = np.ndarray((len(x),len(phiF)),buffer=phi2)
+	if len(phiF) > 1:
+		phi2 = np.array((wsoln[:,2]*(-x*dVinterp(x)*wsoln[:,0]**3*wsoln[:,2] 
+		+ x*dyinterp(x)*wsoln[:,2]*wsoln[:,3] + wsoln[:,0]*((x*d2yinterp(x) 
+		+ 2*dyinterp(x))*wsoln[:,2] + x*dyinterp(x)*wsoln[:,5])), 
+		wsoln[:,2]*(-x*dV2interp(x)*wsoln[:,0]**3*wsoln[:,2] 
+		+ x*dy2interp(x)*wsoln[:,2]*wsoln[:,3] + wsoln[:,0]*((x*d2y2interp(x) 
+		+ 2*dy2interp(x))*wsoln[:,2] + x*dy2interp(x)*wsoln[:,5]))))
+	else:
+		phi2 = np.array()
+	phi2T = np.ndarray((len(x),len(phiF)),buffer=phi2)
+	if len(phiF)<=1:
+		a0 = 0
+		a1 = 0
+		a2 = 0
+	else:
+		a0 = np.array(wsoln[:,0])
+		a1 = np.array(wsoln[:,1])
+		a2 = 0
+		alpha0 = np.array(wsoln[:,2])
+		alpha1 = np.array(6*wsoln[:,1]/wsoln[:,0])
 
 	N = len(phiF)
 	Y = np.empty((len(x), N*2+2))
-	#Y[:, :N] = y + t0*t0*C # phi
-	#Y[:, N:2*N] = 2*t0*C # Pi = (dphi/dN) * (a/alpha) ~ dphi/dN
-	#Y[:, -2] = 1 - t0*t0*(A-B) # alpha
-	#Y[:, -1] = 1 + t0*t0*(A+2*B) # a
+	
 	Y[:, :N] = y + t0*t0*phi2T # phi
-        Y[:, N:2*N] = 2*t0*phi2T # Pi = (dphi/dN) * (a/alpha) ~ dphi/dN
-	Y[:, -2] = alpha0 # alpha
-	Y[:, -1] = a0 + t0*t0*(a2) # a
-        
+	Y[:, N:2*N] = 2*t0*phi2T # Pi = (dphi/dN) * (a/alpha) ~ dphi/dN
+	#Y[:, -3] = x + t0*a1*x # b
+	Y[:, -2] = alpha0 + t0*alpha1 # alpha
+	Y[:, -1] = a0 + t0*a1 # a
+	
 	return t0,x,Y
+
         
 
 class monitorFunc1D(object):
@@ -336,15 +368,46 @@ class monitorFunc1D(object):
 		self.num_walls = num_walls
 
 	def __call__(self, t,x,y):
-	    Pi = y[:,1]
-	    dPidx = deriv14(Pi, x)
-	    m = abs(dPidx)
-	    m_mid = (m[1:] + m[:-1])*0.5
-	    dx = x[1:] - x[:-1]
-	    total_pnts = np.sum(m_mid * dx)
-	    m *= self.pnts_per_wall * self.num_walls / total_pnts
-	    m[m<self.min_density] = self.min_density
-	    return m
+		Pi = y[:,1]
+		dPidx = deriv14(Pi, x)
+		m = abs(dPidx)
+		m_mid = (m[1:] + m[:-1])*0.5
+		dx = x[1:] - x[:-1]
+		total_pnts = np.sum(m_mid * dx)
+		m *= self.pnts_per_wall * self.num_walls / total_pnts
+		m[m<self.min_density] = self.min_density
+		return m
+
+class monitorFunc2D(object):
+	"""
+	A simple monitor function for use with multi-field potentials.
+
+	The calculated grid density is :math:`m(x) \\propto d\\Pi/dx`,
+	with the proportionaly such that there are the specified number
+	of points per bubble wall.
+	"""
+	def __init__(self, pnts_per_wall, min_density, num_walls):
+		self.pnts_per_wall = pnts_per_wall
+		self.min_density = min_density
+		self.num_walls = num_walls
+
+	def __call__(self, t,x,y):
+		Pi1 = y[:,2]
+		dPi1dx = deriv14(Pi1, x)
+		m1 = abs(dPi1dx)
+		m1_mid = (m1[1:] + m1[:-1])*0.5
+		dx = x[1:] - x[:-1]
+		total_pnts1 = np.sum(m1_mid * dx)
+		m1 *= self.pnts_per_wall * self.num_walls / total_pnts1
+		m1[m1<self.min_density] = self.min_density
+		Pi2 = y[:,3]
+		dPi2dx = deriv14(Pi2, x)
+		m2 = abs(dPi2dx)
+		m2_mid = (m2[1:] + m2[:-1])*0.5
+		total_pnts2 = np.sum(m2_mid * dx)
+		m2 *= self.pnts_per_wall * self.num_walls / total_pnts2
+		m2[m2<self.min_density] = self.min_density
+		return np.maximum(m1,m2)
 
 
 def runModelFromInstanton(
