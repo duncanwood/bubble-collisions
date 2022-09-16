@@ -7,7 +7,7 @@ build/
 src_docs/_*
 *.sublime-workspace
 collision_movie.mp4
-.vscode/c_cpp_properties.json
+.vscode/*
 src/bubble-collisions.code-workspace
 .gitignore
 test/test_fullsky_perturbations.pdf
