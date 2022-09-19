@@ -15,3 +15,7 @@ test/test_perturbation_comparison.pdf
 test/test_perturbation_fits.pdf
 .python-version
 *.swp
+a_contour.pdf
+.gitignore
+phi_contour.pdf
+alpha_contour.pdf
