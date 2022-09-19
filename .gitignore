@@ -6,3 +6,16 @@ build/
 
 src_docs/_*
 *.sublime-workspace
+collision_movie.mp4
+.vscode/*
+src/bubble-collisions.code-workspace
+.gitignore
+test/test_fullsky_perturbations.pdf
+test/test_perturbation_comparison.pdf
+test/test_perturbation_fits.pdf
+.python-version
+*.swp
+a_contour.pdf
+.gitignore
+phi_contour.pdf
+alpha_contour.pdf
