@@ -22,13 +22,13 @@ def runScript(res, fname, xsep=1.0):
     j = 0.001
     phiF = (0.7,0.05), phiT = (0.01,-0.01) can go for a long time before failing t ~ 500
     """
-    m = 0.2
-    c = 0.11
-    a = 0.127
-    g = 0.0016
+    m = 0.1
+    c = 0.04
+    a = 0.0393
+    g = 0.0003
     f = 1.0
-    h = 0.0008
-    j = 0.001
+    h = 0.000005
+    j = 0.0001
 
     model = models.TiltedHat(
         m=m, a=a, c=c, g=g, f=f, h=h, j=j)
@@ -38,8 +38,8 @@ def runScript(res, fname, xsep=1.0):
     def dV(y):
         return model.dV(y,True)
 
-    phiF = (0.7,0.05)
-    phiT = (0.01,-0.01)
+    phiF = (0.68,0.005)
+    phiT = (-0.015,0.005)
     
     path2D = (np.array((phiT, phiF)))
     tobj = pd.fullTunneling(path2D, model.V, model.dV)
@@ -90,15 +90,14 @@ def runScript(res, fname, xsep=1.0):
     plt.figure()
 
     simulation.setModel(model)
-    tfix = 1.0
+    tfix = 3.0
     simulation.setFileParams(fname, xres=2, tout=tfix/10.)
     #simulation.setIntegrationParams(mass_osc = model.dV(phiF)[0]/.01)
     #what does mass_osc do??
     t0,x0,y0 = collisionRunner.calcInitialDataFromInst(
-        model, inst1, None, phiF, xsep=1.0, xmin=0.01, xmax = 1.2*max(r))
+        model, inst1, None, phiF, xsep=1.0, xmin=0.01, xmax = 100)
     simulation.setMonitorCallback(
         collisionRunner.monitorFunc2D(50., 120., 1))
-    #monitor2D needs to be rewritten??
     t, x, y = simulation.runCollision(x0,y0,t0,tfix, growBounds=False)
     if (t < tfix*.9999):
        raise RuntimeError("Didn't reach tfix. Aborting.")

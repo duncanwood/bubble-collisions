@@ -251,7 +251,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	# From here on, it's the same as before....
 
 	# At this point we have the x grid and the fields on that grid.
-	# At t0=0, the time derivs are zero and alpha and a are 1.
+	# At t0=0, the time derivs are zero
 	# At t0>0, we've got to be a little more careful.
 
 	V = model.V
@@ -260,11 +260,6 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	t0 = rel_t0 * inst1["x"][-1]
 	if (inst2):
 		t0 = min(t0, rel_t0 * inst2["x"][-1])
-
-	#A = -.5 + 4*np.pi*V(y)/3
-	#B = 2*np.pi*np.sum(dy*dy, axis=1)/3
-	#C = (1./6) * (d2y - dV(y))
-	#A = B = C = 0 # NEED TO REMOVE THIS
     
 	Vinterp = interpolate.interp1d(x, V(y),fill_value="extrapolate")
 	dVinterp = interpolate.interp1d(x, dV(y).T[0],fill_value="extrapolate")
@@ -279,6 +274,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	
 	plt.figure()
 	plt.plot(x,Vinterp(x),'r')
+	plt.yscale('log')
 	plt.savefig("V_x.pdf")
 	plt.figure()
 
@@ -290,7 +286,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		- 8*np.pi*Vinterp(r)*r*w[0]**4*w[2]**2 - 4*w[0]*w[2]**2*w[3]
 		+ r*w[2]**2*w[3]**2)/(2*r*w[0]*w[2]**2)
 		dalphdx = w[5]
-		d2alphdx2 = (1/(r*w[0]**2))*(-8*np.pi*r*dyinterp(r)**2*w[0]**2*w[2] 
+		d2alphdx2 = 1/(r*w[0]**2)*(-8*np.pi*r*dyinterp(r)**2*w[0]**2*w[2] 
 		- 8*np.pi*r*dy2interp(r)**2*w[0]**2*w[2] + w[0]*w[2]*w[3] 
 		+ 2*r*w[2]*w[3]**2 + w[0]**2*w[5] + 2*r*w[0]*w[3]*w[5] 
 		- r*w[0]*w[2]*d2a0dx2)
@@ -302,23 +298,23 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		print(dwdx)
 		return dwdx
 
-	winit = [1.0, 1e-3, 1.0, 0.0, 0.0, 0.0]
+	winit = [1.0, 1e-5, 1.0, 0.0, 0.0, 0.0]
 	wsoln = odeint(diffeq, winit, x)
 
 	plt.figure()
 	plt.plot(x, wsoln[:,0], 'b')
-	plt.plot(x, wsoln[:,1], 'r')
+	#plt.plot(x, wsoln[:,1], 'r')
 	plt.plot(x, wsoln[:,2], 'g')
-	plt.ylim(-2,10)
+	plt.plot(x,1+x*x/330**2, 'go', markersize=0.1)
+	plt.plot(x,1/(1+x*x/330**2), 'bo', markersize=0.1)
+	#plt.ylim(-0.1,2)
 	plt.savefig("initial.pdf")
+
 	plt.figure()
 	plt.plot(x, wsoln[:,3], 'b')
-	plt.plot(x, wsoln[:,4], 'r')
 	plt.plot(x, wsoln[:,5], 'g')
-	plt.ylim(-1.0,1.0)
-	plt.savefig("initial_prime.pdf")
-
-	print(wsoln[:,0])
+	plt.ylim(-0.1,0.1)
+	plt.savefig("test.pdf")
 
 	if len(phiF) > 1:
 		phi2 = np.array((wsoln[:,2]*(-x*dVinterp(x)*wsoln[:,0]**3*wsoln[:,2] 
