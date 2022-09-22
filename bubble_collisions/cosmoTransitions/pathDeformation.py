@@ -946,7 +946,7 @@ def fullTunneling(path_pts, V, dV, maxiter=20, fixEndCutoff=.03,
         if verbose: print("Starting tunneling step %i" % num_iter)
         # 1. Fit the spline to the path.
         path = SplinePath(pts, V, dV, V_spline_samples=V_spline_samples,
-                          extend_to_minima=True, reeval_distances=False)
+                          extend_to_minima=True, reeval_distances=True)
         # 2. Do 1d tunneling along the path.
         if V_spline_samples is not None:
             tobj = tunneling_class(0.0, path.L, path.V, path.dV, path.d2V, 

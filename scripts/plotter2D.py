@@ -16,8 +16,8 @@ data = simulation.readFromFile(inFile)
 Ndata = np.array([d[0] for d in data])
 xnum = 1000
 ynum = 1000
-x = np.linspace(0.01,40.3, xnum)
-N_list = np.linspace(0.0,100.0, ynum)
+x = np.linspace(0.01,40.0, xnum)
+N_list = np.linspace(0.0,3.0, ynum)
 
 phi1 = []
 phi2 = []
@@ -29,7 +29,7 @@ pix2 = []
 m = 0.2
 c = 0.1
 a = 0.123
-g = 0.002
+g = 0.0015
 f = 1.0
 h = 0.0008
 j = 0.001
@@ -74,12 +74,21 @@ Pix1 = np.array(pix1)
 Pix2 = np.array(pix2)
 momemconstr = Alpha*(4*np.pi*Alpha*AA*(Pix1*phi1intpx + Pix2*phi2intpx) + AA*aintpxt - aintpx*aintpt)/(aintpt*AA)
 
+plt.figure()
+plt.plot(X,AA,'ro')
+plt.savefig("a.pdf")
+
+plt.figure()
+plt.plot(x,aa,'ro')
+plt.savefig("aother.pdf")
+"""
 ax0 = AA.T[0]
 afit = np.polyfit(np.sqrt(N_list),ax0,deg=1)
 print(afit)
 plt.figure()
 plt.plot(np.sqrt(N_list),ax0)
 plt.savefig("a_x0_t.png")
+
 
 plt.figure()
 plt.contourf(x,N_list,phi1,20,cmap='RdGy')
@@ -211,3 +220,4 @@ plt.xlabel("radius")
 plt.title("a / sqrt(N")
 plt.legend()
 plt.savefig("a_sqrt_time_x.png")
+"""
