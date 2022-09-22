@@ -4,6 +4,7 @@
 *.so
 build/
 
+duncan_plots/*
 src_docs/_*
 *.sublime-workspace
 collision_movie.mp4
