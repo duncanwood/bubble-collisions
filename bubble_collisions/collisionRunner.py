@@ -14,7 +14,7 @@ All of the rest can be handled by the default arguments.
 
 import numpy as np
 np.set_printoptions(threshold=np.inf)
-from scipy import interpolate
+from scipy import interpolate, optimize
 
 from .derivsAndSmoothing import deriv14, deriv23
 from . import simulation
@@ -263,6 +263,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
     
 	Vinterp = interpolate.interp1d(x, V(y),fill_value="extrapolate")
 	dVinterp = interpolate.interp1d(x, dV(y).T[0],fill_value="extrapolate")
+	Vmin = Vinterp(optimize.minimize(Vinterp, 0.).x)
 	yinterp = interpolate.interp1d(x, y.T[0],fill_value="extrapolate")
 	dyinterp = interpolate.interp1d(x, dy.T[0],fill_value="extrapolate")
 	d2yinterp = interpolate.interp1d(x, d2y.T[0], fill_value="extrapolate")
@@ -298,16 +299,19 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		print(dwdx)
 		return dwdx
 
-	winit = [1.0, 0.0405, 1.0, 0.0, 0.0, 0.0]
+	winit = [1.0, 0.06, 1.0, 0.0, 0.0, 0.0]
 	wsoln = odeint(diffeq, winit, x)
-
+	ds_radius = np.sqrt(3/(8*np.pi*Vmin))
+	print 'Min of V(y): {}'.format(Vmin)
 	plt.figure()
-	plt.plot(x, wsoln[:,0], 'b')
-	plt.plot(x, wsoln[:,2], 'g')
-	plt.plot(x,(1-x**2/(158.9)**2)**(0.5), 'g-', alpha=0.5)
-	plt.plot(x,(1-x**2/(158.9)**2)**(-0.5), 'b-',alpha=0.5)
+	plt.plot(x, wsoln[:,0], 'b', label=r"Calculated $a$")
+	plt.plot(x, wsoln[:,2], 'g', label=r"Calculated $\alpha$")
+	plt.plot(x,(1-x**2/(ds_radius)**2)**(0.5), 'g-', alpha=0.5, label=r"Theoretical $\alpha$" )
+	plt.plot(x,(1-x**2/(ds_radius)**2)**(-0.5), 'b-',alpha=0.5, label=r"Theoretical $a$")
+	plt.legend()
 	#plt.ylim(-0.1,2)
 	plt.savefig("initial.pdf")
+
 
 	if len(phiF) > 1:
 		phi2 = np.array((wsoln[:,2]*(-x*dVinterp(x)*wsoln[:,0]**3*wsoln[:,2] 

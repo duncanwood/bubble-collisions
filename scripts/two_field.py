@@ -5,6 +5,7 @@ from bubble_collisions.cosmoTransitions import tunneling1D
 from bubble_collisions.derivsAndSmoothing import deriv14
 import matplotlib.pyplot as plt
 import scipy.interpolate as intp
+import scipy.optimize
 
 def runScript(res, fname, xsep=1.0):
     """
@@ -38,8 +39,13 @@ def runScript(res, fname, xsep=1.0):
     def dV(y):
         return model.dV(y,True)
 
-    phiF = (0.65, 0.005)
-    phiT = (-0.0, 0.0)
+    phiT = scipy.optimize.minimize(model.V, (0,0)).x
+    phiF_guess = np.array([0.6, 0.005])
+    phiF_lowerbound = phiT + 0.1*(phiF_guess)
+    phiF_bounds = [[bound, np.inf] for bound in phiF_lowerbound]
+    phiF = scipy.optimize.minimize(model.V, phiF_guess, bounds=phiF_bounds).x
+
+    print 'phiF: {}\nphiT: {}\nVF: {}\nVT: {}'.format(phiF, phiT, model.V(phiF), model.V(phiT))
 
     path2D = (np.array((phiT, phiF)))
     tobj = pd.fullTunneling(path2D, model.V, model.dV)
@@ -94,7 +100,7 @@ def runScript(res, fname, xsep=1.0):
     #simulation.setIntegrationParams(mass_osc = model.dV(phiF)[0]/.01)
     #what does mass_osc do??
     t0,x0,y0 = collisionRunner.calcInitialDataFromInst(
-        model, inst1, None, phiF, xsep=1.0, xmin=0.01, xmax = 1.2*max(r))
+        model, inst1, None, phiF, xsep=1.0, xmin=0.01, xmax = 1.2*np.max(r))
     simulation.setMonitorCallback(
         collisionRunner.monitorFunc2D(50., 120., 1))
     t, x, y = simulation.runCollision(x0,y0,t0,tfix, growBounds=False)
