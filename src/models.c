@@ -308,7 +308,7 @@ static int tilted_hat_V(
         double phi2 = y_in[i*ny+1];
         y_out[i] = pow(self->m,2)*(pow(phi1,2) + pow(phi2,2)) - 
                     self->a*pow(pow(phi1,2) + pow(phi2,2),2) + 
-                    self->c*pow(pow(phi1,2) + pow(phi2,2),3) + self->g*sin(phi1*pow(self->f,-1)) + self->j*sin(phi2*pow(self->f,-1)) + self->h;
+                    self->c*pow(pow(phi1,2) + pow(phi2,2),3) + self->g*sin(phi1*pow(self->f,-1)) - self->j*sin(phi2*pow(self->f,-1)) + self->h;
     }
     return 0;
 }
@@ -324,7 +324,7 @@ static int tilted_hat_dV(
         y_out[2*i] = self->g*cos(phi1*pow(self->f,-1))*pow(self->f,-1) + 2*phi1*pow(self->m,2) - 
                          4*self->a*phi1*(pow(phi1,2) + pow(phi2,2)) + 
                          6*self->c*phi1*pow(pow(phi1,2) + pow(phi2,2),2);
-        y_out[2*i+1] = self->j*cos(phi2*pow(self->f,-1))*pow(self->f,-1) + 2*phi2*pow(self->m,2) - 4*self->a*phi2*(pow(phi1,2) + pow(phi2,2)) + 
+        y_out[2*i+1] = -self->j*cos(phi2*pow(self->f,-1))*pow(self->f,-1) + 2*phi2*pow(self->m,2) - 4*self->a*phi2*(pow(phi1,2) + pow(phi2,2)) + 
                          6*self->c*phi2*pow(pow(phi1,2) + pow(phi2,2),2);
     }
     return 0;

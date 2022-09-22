@@ -23,12 +23,12 @@ def runScript(res, fname, xsep=1.0):
     phiF = (0.7,0.05), phiT = (0.01,-0.01) can go for a long time before failing t ~ 500
     """
     m = 0.1
-    c = 0.04
-    a = 0.0393
-    g = 0.0003
+    c = 0.037
+    a = 0.0345
+    g = 0.00001
     f = 1.0
     h = 0.000005
-    j = 0.0001
+    j = 0.0003
 
     model = models.TiltedHat(
         m=m, a=a, c=c, g=g, f=f, h=h, j=j)
@@ -38,9 +38,9 @@ def runScript(res, fname, xsep=1.0):
     def dV(y):
         return model.dV(y,True)
 
-    phiF = (0.68,0.005)
-    phiT = (-0.015,0.005)
-    
+    phiF = (0.65, 0.005)
+    phiT = (-0.0, 0.0)
+
     path2D = (np.array((phiT, phiF)))
     tobj = pd.fullTunneling(path2D, model.V, model.dV)
 
@@ -66,7 +66,7 @@ def runScript(res, fname, xsep=1.0):
     inst1 = inst2 = inst
     
     plt.figure()
-    nx = 100
+    nx = 10
     X = np.linspace(-1.,1.,nx)[:,None] * np.ones((1,nx))
     Y = np.linspace(-1.,1.,nx)[None,:] * np.ones((nx,1))
     XY = np.rollaxis(np.array([X,Y]), 0, 3)
@@ -75,7 +75,6 @@ def runScript(res, fname, xsep=1.0):
     plt.colorbar()
     plt.plot(tobj.Phi[:,0], tobj.Phi[:,1], 'b')
     plt.savefig("V2D.png")
-
 
     plt.figure()
     plt.plot(r,tobj.Phi[:,0])
@@ -90,12 +89,12 @@ def runScript(res, fname, xsep=1.0):
     plt.figure()
 
     simulation.setModel(model)
-    tfix = 3.0
+    tfix = 100.0
     simulation.setFileParams(fname, xres=2, tout=tfix/10.)
     #simulation.setIntegrationParams(mass_osc = model.dV(phiF)[0]/.01)
     #what does mass_osc do??
     t0,x0,y0 = collisionRunner.calcInitialDataFromInst(
-        model, inst1, None, phiF, xsep=1.0, xmin=0.01, xmax = 100)
+        model, inst1, None, phiF, xsep=1.0, xmin=0.01, xmax = 1.2*max(r))
     simulation.setMonitorCallback(
         collisionRunner.monitorFunc2D(50., 120., 1))
     t, x, y = simulation.runCollision(x0,y0,t0,tfix, growBounds=False)

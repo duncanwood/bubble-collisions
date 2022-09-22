@@ -117,6 +117,7 @@ class SingleFieldInstanton:
                  phi_bar=None, rscale=None):
         self.phi_absMin, self.phi_metaMin = phi_absMin, phi_metaMin
         self.V = V
+        print("phi absMin", phi_absMin)
         print("Vmeta",V(phi_metaMin),"Vmin",V(phi_absMin))
         if V(phi_metaMin) <= V(phi_absMin):
             raise PotentialError(
@@ -249,11 +250,11 @@ class SingleFieldInstanton:
         """
         def negV(phi): 
             return -self.V(clampVal(phi, self.phi_bar, self.phi_metaMin))
-        print("phibar",self.phi_bar, "phimeta",self.phi_metaMin)
+        print("phimeta", self.phi_metaMin)
         phi_guess = 0.5 * (self.phi_bar + self.phi_metaMin)
         phi_tol = abs(self.phi_bar - self.phi_metaMin) * 1e-6
         phi_bar_top = optimize.fmin(negV, phi_guess, xtol=phi_tol, disp=0)[0]
-        print("phibartop",phi_bar_top)
+        print("phibartop",phi_bar_top, "Vtop", self.V(phi_bar_top))
         if not (self.phi_bar < phi_bar_top < self.phi_metaMin or 
                 self.phi_bar > phi_bar_top > self.phi_metaMin):
             raise PotentialError("Minimization is placing the top of the "
@@ -262,7 +263,6 @@ class SingleFieldInstanton:
             "no barrier")
 
         Vtop = self.V(phi_bar_top) - self.V(self.phi_metaMin)
-        print("Vtop",Vtop)
         xtop = phi_bar_top - self.phi_metaMin
         # Cubic function given by (ignoring linear and constant terms):
         # f(x) = C [(-1/3)x^3 + (1/2)x^2 xtop]

@@ -298,23 +298,16 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		print(dwdx)
 		return dwdx
 
-	winit = [1.0, 1e-5, 1.0, 0.0, 0.0, 0.0]
+	winit = [1.0, 0.0405, 1.0, 0.0, 0.0, 0.0]
 	wsoln = odeint(diffeq, winit, x)
 
 	plt.figure()
 	plt.plot(x, wsoln[:,0], 'b')
-	#plt.plot(x, wsoln[:,1], 'r')
 	plt.plot(x, wsoln[:,2], 'g')
-	plt.plot(x,1+x*x/330**2, 'go', markersize=0.1)
-	plt.plot(x,1/(1+x*x/330**2), 'bo', markersize=0.1)
+	plt.plot(x,(1-x**2/(158.9)**2)**(0.5), 'g-', alpha=0.5)
+	plt.plot(x,(1-x**2/(158.9)**2)**(-0.5), 'b-',alpha=0.5)
 	#plt.ylim(-0.1,2)
 	plt.savefig("initial.pdf")
-
-	plt.figure()
-	plt.plot(x, wsoln[:,3], 'b')
-	plt.plot(x, wsoln[:,5], 'g')
-	plt.ylim(-0.1,0.1)
-	plt.savefig("test.pdf")
 
 	if len(phiF) > 1:
 		phi2 = np.array((wsoln[:,2]*(-x*dVinterp(x)*wsoln[:,0]**3*wsoln[:,2] 
@@ -336,6 +329,11 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		a2 = 0
 		alpha0 = np.array(wsoln[:,2])
 		alpha1 = np.array(6*wsoln[:,1]/wsoln[:,0])
+
+	plt.figure()
+	plt.plot(x,a1, 'b')
+	plt.plot(x,alpha1,'g')
+	plt.savefig("alpha1.pdf")
 
 	N = len(phiF)
 	Y = np.empty((len(x), N*2+2))

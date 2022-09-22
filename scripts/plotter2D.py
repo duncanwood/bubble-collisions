@@ -16,8 +16,8 @@ data = simulation.readFromFile(inFile)
 Ndata = np.array([d[0] for d in data])
 xnum = 1000
 ynum = 1000
-x = np.linspace(0.01,40.0, xnum)
-N_list = np.linspace(0.0,3.0, ynum)
+x = np.linspace(0.01,84.3, xnum)
+N_list = np.linspace(0.0,100.0, ynum)
 
 phi1 = []
 phi2 = []
@@ -26,23 +26,22 @@ aa = []
 pix1 = []
 pix2 = []
 
-m = 0.2
-c = 0.1
-a = 0.123
-g = 0.0015
+m = 0.1
+c = 0.04
+a = 0.038
+g = 0.0004
 f = 1.0
-h = 0.0008
-j = 0.001
+h = 0.000005
+j = 0.0001
 
 def V2D(x,y):
-    return m**2*(x**2 + y**2) - a*(x**2 + y**2)**2 + c*(x**2 + y**2)**3 + g*np.sin(x/f) + h
+    return m**2*(x**2 + y**2) - a*(x**2 + y**2)**2 + c*(x**2 + y**2)**3 + g*np.sin(x/f) - j*np.sin(y/f) + h
 def V2Dvec(x):
     return V2D(x[0],x[1])
-false_phi=fmin(V2Dvec, np.array([1,0]))
-false_phi = np.array([0.7,0.05])
-false_vac=V2Dvec(false_phi)
-rH = math.sqrt(3/(8*math.pi)/false_vac)
-print(false_phi, false_vac, rH)
+meta_phi = np.array([-0.015, 0.005])
+meta_vac=V2Dvec(meta_phi)
+rH = math.sqrt(3/(8*math.pi)/meta_vac)
+print(meta_phi, meta_vac, rH)
 
 for i in range(len(N_list)):
     Y=simulation.valsOnGrid(
@@ -74,14 +73,6 @@ Pix1 = np.array(pix1)
 Pix2 = np.array(pix2)
 momemconstr = Alpha*(4*np.pi*Alpha*AA*(Pix1*phi1intpx + Pix2*phi2intpx) + AA*aintpxt - aintpx*aintpt)/(aintpt*AA)
 
-plt.figure()
-plt.plot(X,AA,'ro')
-plt.savefig("a.pdf")
-
-plt.figure()
-plt.plot(x,aa,'ro')
-plt.savefig("aother.pdf")
-"""
 ax0 = AA.T[0]
 afit = np.polyfit(np.sqrt(N_list),ax0,deg=1)
 print(afit)
@@ -220,4 +211,3 @@ plt.xlabel("radius")
 plt.title("a / sqrt(N")
 plt.legend()
 plt.savefig("a_sqrt_time_x.png")
-"""
