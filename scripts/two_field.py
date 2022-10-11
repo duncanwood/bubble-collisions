@@ -23,13 +23,13 @@ def runScript(res, fname, xsep=1.0):
     j = 0.001
     phiF = (0.7,0.05), phiT = (0.01,-0.01) can go for a long time before failing t ~ 500
     """
-    m = 0.1
-    c = 0.037
-    a = 0.0345
-    g = 0.00001
+    m = 1.0
+    c = 0.8
+    a = 1.6
+    g = 0.05
     f = 1.0
-    h = 0.000005
-    j = 0.0003
+    h = 0.005
+    j = 0.005
 
     model = models.TiltedHat(
         m=m, a=a, c=c, g=g, f=f, h=h, j=j)
@@ -40,15 +40,14 @@ def runScript(res, fname, xsep=1.0):
         return model.dV(y,True)
 
     phiT = scipy.optimize.minimize(model.V, (0,0)).x
-    phiF_guess = np.array([0.6, 0.005])
-    phiF_lowerbound = phiT + 0.1*(phiF_guess)
-    phiF_bounds = [[bound, np.inf] for bound in phiF_lowerbound]
+    phiF_guess = np.array([0.75, 0.05])
+    phiF_bounds = ((0.8*phiF_guess[0],1.2*phiF_guess[0]),(-1.1*phiF_guess[1],1.1*phiF_guess[1]))
     phiF = scipy.optimize.minimize(model.V, phiF_guess, bounds=phiF_bounds).x
-
+    
     print 'phiF: {}\nphiT: {}\nVF: {}\nVT: {}'.format(phiF, phiT, model.V(phiF), model.V(phiT))
 
     path2D = (np.array((phiT, phiF)))
-    tobj = pd.fullTunneling(path2D, model.V, model.dV)
+    tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_class=tunneling1D.InstantonWithGravity)
 
     r = tobj.profile1D.R
 
@@ -95,20 +94,22 @@ def runScript(res, fname, xsep=1.0):
     plt.figure()
 
     simulation.setModel(model)
-    tfix = 100.0
+    tfix = 10.0
     simulation.setFileParams(fname, xres=2, tout=tfix/10.)
     #simulation.setIntegrationParams(mass_osc = model.dV(phiF)[0]/.01)
-    #what does mass_osc do??
     t0,x0,y0 = collisionRunner.calcInitialDataFromInst(
         model, inst1, None, phiF, xsep=1.0, xmin=0.01, xmax = 1.2*np.max(r))
+    
     simulation.setMonitorCallback(
         collisionRunner.monitorFunc2D(50., 120., 1))
     t, x, y = simulation.runCollision(x0,y0,t0,tfix, growBounds=False)
     if (t < tfix*.9999):
        raise RuntimeError("Didn't reach tfix. Aborting.")
 
-    print('rmax=',max(r))
-    print('phiF=',phiF)
+    print('tmin = ', t0)
+    print('rmax = ', max(r))
+    print('phiF = ', phiF)
+    print('phiT = ', phiT)
 
 if __name__ == "__main__":
     import argparse

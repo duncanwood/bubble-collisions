@@ -18,6 +18,7 @@ __version__ = "2.0a2"
 import numpy as np
 from scipy import optimize, integrate, special, interpolate
 from collections import namedtuple
+import matplotlib.pyplot as plt
 
 import helper_functions
 from helper_functions import rkqs, IntegrationError, clampVal
@@ -117,8 +118,6 @@ class SingleFieldInstanton:
                  phi_bar=None, rscale=None):
         self.phi_absMin, self.phi_metaMin = phi_absMin, phi_metaMin
         self.V = V
-        print("phi absMin", phi_absMin)
-        print("Vmeta",V(phi_metaMin),"Vmin",V(phi_absMin))
         if V(phi_metaMin) <= V(phi_absMin):
             raise PotentialError(
                 "V(phi_metaMin) <= V(phi_absMin); tunneling cannot occur.", 
@@ -250,7 +249,6 @@ class SingleFieldInstanton:
         """
         def negV(phi): 
             return -self.V(clampVal(phi, self.phi_bar, self.phi_metaMin))
-        print("phimeta", self.phi_metaMin)
         phi_guess = 0.5 * (self.phi_bar + self.phi_metaMin)
         phi_tol = abs(self.phi_bar - self.phi_metaMin) * 1e-6
         phi_bar_top = optimize.fmin(negV, phi_guess, xtol=phi_tol, disp=0)[0]
@@ -929,6 +927,7 @@ class InstantonWithGravity(SingleFieldInstanton):
         ysign = np.sign(y0[0]-self.phi_metaMin) 
             # positive means we're heading down, negative means heading up.
         rmax += r0
+        print("tests y0, ysign", y0, ysign)
         
         i = 1
         convergence_type = None
@@ -938,6 +937,7 @@ class InstantonWithGravity(SingleFieldInstanton):
             r1 = r0 + dr
             y1 = y0 + dy
             dydr1 = dY(y1,r1)
+            print(y1)
         
             # Check for completion
             if r1 > rmax:
@@ -963,15 +963,18 @@ class InstantonWithGravity(SingleFieldInstanton):
             elif y1[1]*ysign > 0 or (y1[0]-self.phi_metaMin)*ysign < 0:
                 f = cubicInterpFunction(y0, dr*dydr0, y1, dr*dydr1)
                 if(y1[1]*ysign > 0):
+                    print("y0, y1 prime", y0[1], y1[1])
                     # Extrapolate to where dphi(r) = 0
-                    x = optimize.brentq(lambda x: f(x)[1], 0, 1 )
+                    x = optimize.brentq(lambda x: f(x)[1], 0, 1)
                     convergence_type = "undershoot"
                 else:
+                    print("overshot")
                     # Extrapolate to where phi(r) = phi_metaMin
-                    x = optimize.brentq(lambda x: f(x)[0]-self.phi_metaMin, 0,1)
+                    x = optimize.brentq(lambda x: f(x)[0]-self.phi_metaMin, 0, 1)
                     convergence_type = "overshoot"
                 r = r0 + dr*x
                 y = f(x)
+                print("y", y)
                 break
             # Advance the integration variables
             r0,y0,dydr0 = r1,y1,dydr1

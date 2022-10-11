@@ -16,8 +16,8 @@ data = simulation.readFromFile(inFile)
 Ndata = np.array([d[0] for d in data])
 xnum = 1000
 ynum = 1000
-x = np.linspace(0.01,84.3, xnum)
-N_list = np.linspace(0.0,100.0, ynum)
+x = np.linspace(0.01,41.65, xnum)
+N_list = np.linspace(0.0347,10.0, ynum)
 
 phi1 = []
 phi2 = []
@@ -26,19 +26,19 @@ aa = []
 pix1 = []
 pix2 = []
 
-m = 0.1
-c = 0.04
-a = 0.038
-g = 0.0004
+m = 0.2
+c = 0.1
+a = 0.1165
+g = 0.004
 f = 1.0
-h = 0.000005
+h = 0.0003
 j = 0.0001
 
 def V2D(x,y):
     return m**2*(x**2 + y**2) - a*(x**2 + y**2)**2 + c*(x**2 + y**2)**3 + g*np.sin(x/f) - j*np.sin(y/f) + h
 def V2Dvec(x):
     return V2D(x[0],x[1])
-meta_phi = np.array([-0.015, 0.005])
+meta_phi = np.array([-0.05, 0.001])
 meta_vac=V2Dvec(meta_phi)
 rH = math.sqrt(3/(8*math.pi)/meta_vac)
 print(meta_phi, meta_vac, rH)
@@ -71,15 +71,14 @@ AA = np.array(aa)
 Alpha = np.array(alphaa)
 Pix1 = np.array(pix1)
 Pix2 = np.array(pix2)
-momemconstr = Alpha*(4*np.pi*Alpha*AA*(Pix1*phi1intpx + Pix2*phi2intpx) + AA*aintpxt - aintpx*aintpt)/(aintpt*AA)
+momemconstr = alphaintpx - Alpha*(4*np.pi*Alpha*AA*(Pix1*phi1intpx + Pix2*phi2intpx) + AA*aintpxt - aintpx*aintpt)/(aintpt*AA)
 
-ax0 = AA.T[0]
+"""ax0 = AA.T[0]
 afit = np.polyfit(np.sqrt(N_list),ax0,deg=1)
 print(afit)
 plt.figure()
 plt.plot(np.sqrt(N_list),ax0)
-plt.savefig("a_x0_t.png")
-
+plt.savefig("a_x0_t.png")"""
 
 plt.figure()
 plt.contourf(x,N_list,phi1,20,cmap='RdGy')
@@ -102,6 +101,15 @@ plt.contourf(x,N_list,aa,20,cmap='RdGy')
 plt.colorbar()
 plt.savefig("a_contour.png")
 plt.figure()
+
+plt.figure()
+plt.plot(x,aintp(x,N_list[0]),label='a @ t={:03f}'.format(N_list[0]))
+plt.plot(x,alphaintp(x,N_list[0]),label='alpha @ t={:03f}'.format(N_list[0]))
+plt.xlabel("radius")
+#plt.xscale('log')
+plt.title("a alpha")
+plt.legend()
+plt.savefig("a_alph_init.png")
 
 plt.figure()
 for i in range(4):
