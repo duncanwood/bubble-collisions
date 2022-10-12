@@ -23,10 +23,10 @@ def runScript(res, fname, xsep=1.0):
     j = 0.001
     phiF = (0.7,0.05), phiT = (0.01,-0.01) can go for a long time before failing t ~ 500
     """
-    m = 1.0
-    c = 0.8
-    a = 1.6
-    g = 0.05
+    m = 0.5
+    c = 1.0
+    a = 0.95
+    g = 0.005
     f = 1.0
     h = 0.005
     j = 0.005
@@ -40,14 +40,14 @@ def runScript(res, fname, xsep=1.0):
         return model.dV(y,True)
 
     phiT = scipy.optimize.minimize(model.V, (0,0)).x
-    phiF_guess = np.array([0.75, 0.05])
+    phiF_guess = np.array([0.85, 0.0])
     phiF_bounds = ((0.8*phiF_guess[0],1.2*phiF_guess[0]),(-1.1*phiF_guess[1],1.1*phiF_guess[1]))
     phiF = scipy.optimize.minimize(model.V, phiF_guess, bounds=phiF_bounds).x
     
     print 'phiF: {}\nphiT: {}\nVF: {}\nVT: {}'.format(phiF, phiT, model.V(phiF), model.V(phiT))
 
     path2D = (np.array((phiT, phiF)))
-    tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_class=tunneling1D.InstantonWithGravity)
+    tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_class=tunneling1D.InstantonWithGravity, tunneling_init_params={})
 
     r = tobj.profile1D.R
 

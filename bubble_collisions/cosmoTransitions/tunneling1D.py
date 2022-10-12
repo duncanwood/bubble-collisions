@@ -837,7 +837,7 @@ class InstantonWithGravity(SingleFieldInstanton):
     _initialConditionsWithGrav_rval = namedtuple(
         "initialConditionsWithGrav_rval", "r0 phi dphi rho drho")
     def initialConditions(self, delta_phi0, rmin, delta_phi_cutoff):
-        R"""
+        """
         Finds the initial conditions for integration.
 
         When including gravity, we also need to find the initial conditions
@@ -863,6 +863,7 @@ class InstantonWithGravity(SingleFieldInstanton):
         """
         r0_guess, phi0, dphi0 = SingleFieldInstanton.initialConditions(
             self, delta_phi0, rmin, delta_phi_cutoff)
+        print("params",delta_phi0, rmin, delta_phi_cutoff)
         V0 = self.V(phi0)
         w = abs(self.kappa*V0)**0.5
         if w == 0:
@@ -919,7 +920,10 @@ class InstantonWithGravity(SingleFieldInstanton):
         for `r > 0` (indicating that the bubble has wrapped around to the 
         anti-podal point of de Sitter space), unless `dphi/dr` is also zero.
         """
+        rarr = []
+        phiarr = []
         dr = dr0
+        print("start y", y0)
         # dY is the ODE that we use
         def dY(y,r,args=eqn_args): 
             return self.equationOfMotion(y,r,*args)
@@ -927,7 +931,6 @@ class InstantonWithGravity(SingleFieldInstanton):
         ysign = np.sign(y0[0]-self.phi_metaMin) 
             # positive means we're heading down, negative means heading up.
         rmax += r0
-        print("tests y0, ysign", y0, ysign)
         
         i = 1
         convergence_type = None
@@ -937,8 +940,9 @@ class InstantonWithGravity(SingleFieldInstanton):
             r1 = r0 + dr
             y1 = y0 + dy
             dydr1 = dY(y1,r1)
-            print(y1)
-        
+            rarr.append(r1)
+            phiarr.append(y1[0])
+
             # Check for completion
             if r1 > rmax:
                 raise IntegrationError("r > rmax")
@@ -963,8 +967,9 @@ class InstantonWithGravity(SingleFieldInstanton):
             elif y1[1]*ysign > 0 or (y1[0]-self.phi_metaMin)*ysign < 0:
                 f = cubicInterpFunction(y0, dr*dydr0, y1, dr*dydr1)
                 if(y1[1]*ysign > 0):
-                    print("y0, y1 prime", y0[1], y1[1])
                     # Extrapolate to where dphi(r) = 0
+                    print("undershoot fail: dphi(r) != 0")
+                    print("y0,y1", y0,y1)
                     x = optimize.brentq(lambda x: f(x)[1], 0, 1)
                     convergence_type = "undershoot"
                 else:
@@ -979,6 +984,9 @@ class InstantonWithGravity(SingleFieldInstanton):
             # Advance the integration variables
             r0,y0,dydr0 = r1,y1,dydr1
             dr = drnext
+        plt.figure()
+        plt.plot(rarr,phiarr)
+        plt.savefig("phi_init_test.pdf")
         # Check convergence for a second time. 
         # The extrapolation in overshoot/undershoot might have gotten us within
         # the acceptable error.
