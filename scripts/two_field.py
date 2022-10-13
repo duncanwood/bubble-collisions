@@ -25,7 +25,7 @@ def runScript(res, fname, xsep=1.0):
     """
     m = 0.2
     c = 0.1
-    a = 0.115
+    a = 0.12
     g = 0.002
     f = 1.0
     h = 0.0001
@@ -39,16 +39,22 @@ def runScript(res, fname, xsep=1.0):
     def dV(y):
         return model.dV(y,True)
 
+    plt.figure()
+    phi_list = np.linspace(-0.1,0.8,100)
+    V_list = [model.V((i, 0.005)) for i in phi_list]
+    plt.plot(phi_list,V_list)
+    plt.yscale("log")
+    plt.savefig("V_1_test.pdf")
+
     phiT = scipy.optimize.minimize(model.V, (0,0)).x
-    phiF_guess = np.array([0.7, 0.005])
+    phiF_guess = np.array([0.8, 0.005])
     phiF_bounds = ((0.8*phiF_guess[0],1.2*phiF_guess[0]),(-1.1*phiF_guess[1],1.1*phiF_guess[1]))
     phiF = scipy.optimize.minimize(model.V, phiF_guess, bounds=phiF_bounds).x
-    
     print 'phiF: {}\nphiT: {}\nVF: {}\nVT: {}'.format(phiF, phiT, model.V(phiF), model.V(phiT))
 
     path2D = (np.array((phiT, phiF)))
-    #tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_class=tunneling1D.InstantonWithGravity, tunneling_init_params={})
-    tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_init_params={})
+    tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_class=tunneling1D.InstantonWithGravity, tunneling_init_params={})
+    #tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_init_params={})
 
     r = tobj.profile1D.R
 

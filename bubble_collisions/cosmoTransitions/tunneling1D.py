@@ -252,7 +252,6 @@ class SingleFieldInstanton:
         phi_guess = 0.5 * (self.phi_bar + self.phi_metaMin)
         phi_tol = abs(self.phi_bar - self.phi_metaMin) * 1e-6
         phi_bar_top = optimize.fmin(negV, phi_guess, xtol=phi_tol, disp=0)[0]
-        print("phibartop",phi_bar_top, "Vtop", self.V(phi_bar_top))
         if not (self.phi_bar < phi_bar_top < self.phi_metaMin or 
                 self.phi_bar > phi_bar_top > self.phi_metaMin):
             raise PotentialError("Minimization is placing the top of the "
@@ -480,7 +479,7 @@ class SingleFieldInstanton:
         ysign = np.sign(y0[0]-self.phi_metaMin) 
             # positive means we're heading down, negative means heading up.
         rmax += r0
-        
+
         i = 1
         convergence_type = None
         while True:
@@ -668,8 +667,8 @@ class SingleFieldInstanton:
         else:
             x = -np.log(abs((self.phi_bar-self.phi_absMin) / 
                             (self.phi_metaMin-self.phi_absMin)))
-        xincrease = 5.0 
-            # The relative amount to increase x by if there is no upper bound.
+        xincrease = 5.0
+        # The relative amount to increase x by if there is no upper bound.
         # --
         # Set r parameters
         rmin *= self.rscale
@@ -687,8 +686,12 @@ class SingleFieldInstanton:
         integration_args = (dr0, epsfrac, epsabs, drmin, rmax)
         rf = None
         while True:
-            delta_phi0 = np.exp(-x)*delta_phi
-            # r0, phi0, dphi0 = self.initialConditions(x, rmin, thinCutoff)
+            delta_phi0 = 0.01*np.exp(-x)*delta_phi #fudged by 0.01
+            # I fudged this phi0 was too large how to fix without fudging???
+            #
+            #fixfixfixfixfixfixfixfixfixfixfixfixfix
+            #
+            #r0_, phi0, dphi0 = self.initialConditions(x, rmin, thinCutoff)
             r0_, phi0, dphi0 = self.initialConditions(
                                     delta_phi0, rmin, delta_phi_cutoff)
             if not np.isfinite(r0_) or not np.isfinite(x):
@@ -863,7 +866,6 @@ class InstantonWithGravity(SingleFieldInstanton):
         """
         r0_guess, phi0, dphi0 = SingleFieldInstanton.initialConditions(
             self, delta_phi0, rmin, delta_phi_cutoff)
-        print("params",delta_phi0, rmin, delta_phi_cutoff)
         V0 = self.V(phi0)
         w = abs(self.kappa*V0)**0.5
         if w == 0:
@@ -1000,7 +1002,7 @@ class InstantonWithGravity(SingleFieldInstanton):
     def findProfile(self, xguess=None, xtol=1e-4, phitol=1e-4, 
                     thinCutoff=.01, npoints=500, rmin=1e-4, rmax=1e4,
                     max_interior_pts=None):
-        R"""
+        """
         Calculate the bubble profile by iteratively over/undershooting.
         
         This is very similar to :method:`SingleFieldInstanton.findProfile`,
@@ -1038,7 +1040,7 @@ class InstantonWithGravity(SingleFieldInstanton):
         integration_args = (dr0, epsfrac, epsabs, drmin, rmax)
         rf = None
         while True:
-            delta_phi0 = np.exp(-x)*delta_phi
+            delta_phi0 = 0.01*np.exp(-x)*delta_phi #fixmefixmefixme
             # r0, phi0, dphi0 = self.initialConditions(x, rmin, thinCutoff)
             ry0 = self.initialConditions(delta_phi0, rmin, delta_phi_cutoff)
             if not np.isfinite(ry0[0]) or not np.isfinite(x):
@@ -1117,7 +1119,8 @@ class InstantonWithGravity(SingleFieldInstanton):
         """
         Not implemented.
         """
-        raise NotImplementedError
+        #raise NotImplementedError
+        return 0.
 
 class WallWithConstFriction(SingleFieldInstanton):
     """

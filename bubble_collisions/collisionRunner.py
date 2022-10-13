@@ -264,7 +264,6 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	Vinterp = interpolate.interp1d(x, V(y),fill_value="extrapolate")
 	dVinterp = interpolate.interp1d(x, dV(y).T[0],fill_value="extrapolate")
 	Vmin = Vinterp(optimize.minimize(Vinterp, 0.).x)
-	print(optimize.minimize(Vinterp, 0.).x)
 	yinterp = interpolate.interp1d(x, y.T[0],fill_value="extrapolate")
 	dyinterp = interpolate.interp1d(x, dy.T[0],fill_value="extrapolate")
 	d2yinterp = interpolate.interp1d(x, d2y.T[0], fill_value="extrapolate")
@@ -300,7 +299,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		return dwdx
 
 	ds_radius = np.sqrt(3/(8*np.pi*Vmin))
-	print(Vmin,ds_radius)
+	print("dS radius:", ds_radius)
 	winit = [1.0, 1/ds_radius, 1.0, 0.0, 0.0, 0.0]
 	wsoln = odeint(diffeq, winit, x)
 	
@@ -366,8 +365,8 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		a1 = np.array(wsoln[:,1])
 		a2 = 0
 		alpha0 = np.array(wsoln[:,2])
-		alpha1 = np.array(-wsoln[:,1])
-		#alpha1 = np.array(0*wsoln[:,1])
+		#alpha1 = np.array(-wsoln[:,1])
+		alpha1 = np.array(0*wsoln[:,1])
 
 	plt.figure()
 	plt.plot(x,a1, 'b')
