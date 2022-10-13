@@ -989,7 +989,6 @@ def fullTunneling(path_pts, V, dV, maxiter=20, fixEndCutoff=.03,
     rtuple = namedtuple("fullTunneling_rval", 
                         "profile1D Phi action fRatio saved_steps")
     Phi = path.pts(profile1D.Phi)
-    print(Phi[:15])
     action = tobj.findAction(profile1D)
     return rtuple(profile1D, Phi, action, fRatio, saved_steps)
         

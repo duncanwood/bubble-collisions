@@ -264,6 +264,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	Vinterp = interpolate.interp1d(x, V(y),fill_value="extrapolate")
 	dVinterp = interpolate.interp1d(x, dV(y).T[0],fill_value="extrapolate")
 	Vmin = Vinterp(optimize.minimize(Vinterp, 0.).x)
+	print(optimize.minimize(Vinterp, 0.).x)
 	yinterp = interpolate.interp1d(x, y.T[0],fill_value="extrapolate")
 	dyinterp = interpolate.interp1d(x, dy.T[0],fill_value="extrapolate")
 	d2yinterp = interpolate.interp1d(x, d2y.T[0], fill_value="extrapolate")
@@ -299,6 +300,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		return dwdx
 
 	ds_radius = np.sqrt(3/(8*np.pi*Vmin))
+	print(Vmin,ds_radius)
 	winit = [1.0, 1/ds_radius, 1.0, 0.0, 0.0, 0.0]
 	wsoln = odeint(diffeq, winit, x)
 	
@@ -314,6 +316,36 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	plt.ylim(-0.1,2.0)
 	plt.savefig("initial.pdf")
 
+	a0interp = interpolate.UnivariateSpline(x, wsoln[:,0], k=4, s=0)
+	a0interpx = a0interp.derivative()
+	a0interpxx = a0interpx.derivative()
+	a1interp = interpolate.UnivariateSpline(x, wsoln[:,1], k=4, s=0)
+	a1interpx = a1interp.derivative()
+	a1interpxx = a1interpx.derivative()	
+	alpha0interp = interpolate.UnivariateSpline(x, wsoln[:,2], k=4, s=0)
+	alpha0interpx = alpha0interp.derivative()
+	alpha0interpxx = alpha0interpx.derivative()
+	alpha1interp = interpolate.UnivariateSpline(x, -wsoln[:,1]/wsoln[:,0], k=4, s=0)
+
+	K3scalar = -3*a1interp(x)/(a0interp(x)*alpha0interp(x))
+	R3scalar = 2*x*a0interpx(x)**2-4*a0interp(x)*(2*a0interpx(x) + x*a0interpxx(x))/(x*a0interp(x)**4)
+	R4scalar = 1/(x*a0interp(x)**4*alpha0interp(x)**3)*(2*x*alpha0interp(x)**3*a0interpx(x)**2 
+	- 2*a0interp(x)*alpha0interp(x)**2*(x*a0interpx(x)*alpha0interpx(x) + 2*alpha0interp(x)*(2*a0interpx(x) + x*a0interpxx(x))) 
+	- 2*a0interp(x)**2*alpha0interp(x)*(alpha0interp(x)*(2*alpha0interpx(x) + x*a0interpxx(x)) - 3*x*a1interp(x)**2) 
+	+ a0interp(x)**3*(-6*x*a1interp(x)*alpha1interp(x) + 6*x*alpha0interp(x)*a0interpxx(x)))
+	
+	plt.figure()
+	plt.plot(x, K3scalar, 'b', label=r"Extrinsic scalar curvature")
+	plt.plot(x, -3/ds_radius*np.ones_like(x), 'b--', label=r"Extrinsic scalar curvature dS")
+	plt.plot(x, R3scalar, 'r', label=r"Ricci 3 scalar curvature")
+	plt.plot(x, 0*np.ones_like(x), 'r--', label=r"Ricci 3 scalar curvature dS")
+	plt.plot(x, R4scalar, 'g', label=r"Ricci 4 scalar curvature")
+	plt.plot(x, 12/ds_radius**2*np.ones_like(x), 'g--', label=r"Ricci 4 scalar curvature dS")
+	plt.axvline(x=ds_radius,color='black', label="dS radius")
+	plt.legend()
+	plt.ylim(-1,1)
+	plt.xlabel("r")
+	plt.savefig("scalar_curvature.pdf")
 
 	if len(phiF) > 1:
 		phi2 = np.array((wsoln[:,2]*(-x*dVinterp(x)*wsoln[:,0]**3*wsoln[:,2] 
@@ -334,8 +366,8 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		a1 = np.array(wsoln[:,1])
 		a2 = 0
 		alpha0 = np.array(wsoln[:,2])
-		#alpha1 = np.array(6*wsoln[:,1]/wsoln[:,0])
-		alpha1 = np.array(0*wsoln[:,1])
+		alpha1 = np.array(-wsoln[:,1])
+		#alpha1 = np.array(0*wsoln[:,1])
 
 	plt.figure()
 	plt.plot(x,a1, 'b')

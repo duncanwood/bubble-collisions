@@ -23,13 +23,13 @@ def runScript(res, fname, xsep=1.0):
     j = 0.001
     phiF = (0.7,0.05), phiT = (0.01,-0.01) can go for a long time before failing t ~ 500
     """
-    m = 0.5
-    c = 1.0
-    a = 0.95
-    g = 0.005
+    m = 0.2
+    c = 0.1
+    a = 0.115
+    g = 0.002
     f = 1.0
-    h = 0.005
-    j = 0.005
+    h = 0.0001
+    j = 0.001
 
     model = models.TiltedHat(
         m=m, a=a, c=c, g=g, f=f, h=h, j=j)
@@ -40,14 +40,15 @@ def runScript(res, fname, xsep=1.0):
         return model.dV(y,True)
 
     phiT = scipy.optimize.minimize(model.V, (0,0)).x
-    phiF_guess = np.array([0.85, 0.0])
+    phiF_guess = np.array([0.7, 0.005])
     phiF_bounds = ((0.8*phiF_guess[0],1.2*phiF_guess[0]),(-1.1*phiF_guess[1],1.1*phiF_guess[1]))
     phiF = scipy.optimize.minimize(model.V, phiF_guess, bounds=phiF_bounds).x
     
     print 'phiF: {}\nphiT: {}\nVF: {}\nVT: {}'.format(phiF, phiT, model.V(phiF), model.V(phiT))
 
     path2D = (np.array((phiT, phiF)))
-    tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_class=tunneling1D.InstantonWithGravity, tunneling_init_params={})
+    #tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_class=tunneling1D.InstantonWithGravity, tunneling_init_params={})
+    tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_init_params={})
 
     r = tobj.profile1D.R
 
