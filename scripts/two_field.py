@@ -23,13 +23,13 @@ def runScript(res, fname, xsep=1.0):
     j = 0.001
     phiF = (0.7,0.05), phiT = (0.01,-0.01) can go for a long time before failing t ~ 500
     """
-    m = 0.2
-    c = 0.1
-    a = 0.12
-    g = 0.002
+    m = 0.01
+    c = 0.0001
+    a = 0.0002
+    g = 0.00002
     f = 1.0
-    h = 0.0001
-    j = 0.001
+    h = 0.00001
+    j = 0.000001
 
     model = models.TiltedHat(
         m=m, a=a, c=c, g=g, f=f, h=h, j=j)
@@ -40,20 +40,21 @@ def runScript(res, fname, xsep=1.0):
         return model.dV(y,True)
 
     plt.figure()
-    phi_list = np.linspace(-0.1,0.8,100)
+    phi_list = np.linspace(-0.1,1.1,100)
     V_list = [model.V((i, 0.005)) for i in phi_list]
     plt.plot(phi_list,V_list)
     plt.yscale("log")
     plt.savefig("V_1_test.pdf")
 
-    phiT = scipy.optimize.minimize(model.V, (0,0)).x
-    phiF_guess = np.array([0.8, 0.005])
+    phiT = scipy.optimize.minimize(model.V, (0.0,0.0)).x
+    phiF_guess = np.array([0.9, 0.005])
     phiF_bounds = ((0.8*phiF_guess[0],1.2*phiF_guess[0]),(-1.1*phiF_guess[1],1.1*phiF_guess[1]))
     phiF = scipy.optimize.minimize(model.V, phiF_guess, bounds=phiF_bounds).x
     print 'phiF: {}\nphiT: {}\nVF: {}\nVT: {}'.format(phiF, phiT, model.V(phiF), model.V(phiT))
 
     path2D = (np.array((phiT, phiF)))
-    tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_class=tunneling1D.InstantonWithGravity, tunneling_init_params={})
+    tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_class=tunneling1D.InstantonWithGravity, tunneling_init_params={}, 
+    tunneling_findProfile_params={"phitol":1e-2, "xtol": 1.e-4})
     #tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_init_params={})
 
     r = tobj.profile1D.R

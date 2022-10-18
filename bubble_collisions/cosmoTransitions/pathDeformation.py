@@ -959,6 +959,7 @@ def fullTunneling(path_pts, V, dV, maxiter=20, fixEndCutoff=.03,
         phi, dphi = tobj.evenlySpacedPhi(phi, dphi, npoints=len(phi), 
                                          fixAbs=False)
         dphi[0] = dphi[-1] = 0.0 # enforce this
+        print("I made it past 1d")
         # 3. Deform the path.
         pts = path.pts(phi) # multi-dimensional points
         deform_obj = deformation_class(pts, dphi, dV, **deformation_init_params)
@@ -971,8 +972,11 @@ def fullTunneling(path_pts, V, dV, maxiter=20, fixEndCutoff=.03,
             converged = False
         pts = deform_obj.phi
         if save_all_steps: saved_steps.append(deform_obj.phi_list)
+        print("I made it past deform")
         # 4. Check convergence. If the deformation converged after one step,
         # then assume that `path` is a good solution.
+        print(converged)
+        print(deform_obj.num_steps)
         if (converged and deform_obj.num_steps < 2):
             break
     else:

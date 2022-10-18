@@ -15,6 +15,7 @@ implemented*).
 
 __version__ = "2.0a2"
 
+from xml.sax import xmlreader
 import numpy as np
 from scipy import optimize, integrate, special, interpolate
 from collections import namedtuple
@@ -517,6 +518,7 @@ class SingleFieldInstanton:
         # Check convergence for a second time. 
         # The extrapolation in overshoot/undershoot might have gotten us within
         # the acceptable error.
+        #print "Convergence? {} <? {}".format(abs(y - np.array([self.phi_metaMin,0])), 3*epsabs)
         if (abs(y - np.array([self.phi_metaMin,0])) < 3*epsabs).all():
             convergence_type = "converged"
         return self._integrateProfile_rval(r, y, convergence_type)
@@ -686,11 +688,7 @@ class SingleFieldInstanton:
         integration_args = (dr0, epsfrac, epsabs, drmin, rmax)
         rf = None
         while True:
-            delta_phi0 = 0.01*np.exp(-x)*delta_phi #fudged by 0.01
-            # I fudged this phi0 was too large how to fix without fudging???
-            #
-            #fixfixfixfixfixfixfixfixfixfixfixfixfix
-            #
+            delta_phi0 = np.exp(-x)*delta_phi
             #r0_, phi0, dphi0 = self.initialConditions(x, rmin, thinCutoff)
             r0_, phi0, dphi0 = self.initialConditions(
                                     delta_phi0, rmin, delta_phi_cutoff)
@@ -714,6 +712,7 @@ class SingleFieldInstanton:
                 x = .5*(xmin+xmax)
             # Check if we've reached xtol
             if (xmax-xmin) < xtol:
+                print("xtolerance reached")
                 break
                     
         # Integrate a second time, this time getting the points along the way
@@ -922,8 +921,6 @@ class InstantonWithGravity(SingleFieldInstanton):
         for `r > 0` (indicating that the bubble has wrapped around to the 
         anti-podal point of de Sitter space), unless `dphi/dr` is also zero.
         """
-        rarr = []
-        phiarr = []
         dr = dr0
         print("start y", y0)
         # dY is the ODE that we use
@@ -939,11 +936,11 @@ class InstantonWithGravity(SingleFieldInstanton):
         ebsabs = epsabs * np.ones(4) # make sure it's an array
         while True:
             dy, dr, drnext = rkqs(y0, dydr0, r0, dY, dr, epsfrac, epsabs)
+            #print "dy = {}".format(dy)
+            #print "y = {}".format(y0)
             r1 = r0 + dr
             y1 = y0 + dy
             dydr1 = dY(y1,r1)
-            rarr.append(r1)
-            phiarr.append(y1[0])
 
             # Check for completion
             if r1 > rmax:
@@ -969,9 +966,8 @@ class InstantonWithGravity(SingleFieldInstanton):
             elif y1[1]*ysign > 0 or (y1[0]-self.phi_metaMin)*ysign < 0:
                 f = cubicInterpFunction(y0, dr*dydr0, y1, dr*dydr1)
                 if(y1[1]*ysign > 0):
+                    print("undershot")
                     # Extrapolate to where dphi(r) = 0
-                    print("undershoot fail: dphi(r) != 0")
-                    print("y0,y1", y0,y1)
                     x = optimize.brentq(lambda x: f(x)[1], 0, 1)
                     convergence_type = "undershoot"
                 else:
@@ -986,12 +982,11 @@ class InstantonWithGravity(SingleFieldInstanton):
             # Advance the integration variables
             r0,y0,dydr0 = r1,y1,dydr1
             dr = drnext
-        plt.figure()
-        plt.plot(rarr,phiarr)
-        plt.savefig("phi_init_test.pdf")
         # Check convergence for a second time. 
         # The extrapolation in overshoot/undershoot might have gotten us within
         # the acceptable error.
+        print "Convergence check {} <? {}".format(abs(y[:2] - [self.phi_metaMin,0]), 3*epsabs[:2])
+        print "Weirdness phi, phi_meta = {}, {}".format(y[0],self.phi_metaMin)
         if (abs(y[:2] - [self.phi_metaMin,0]) < 3*epsabs[:2]).all():
             convergence_type = "converged"
         return self._integrateProfile_rval(r, y, convergence_type)    
@@ -1016,7 +1011,7 @@ class InstantonWithGravity(SingleFieldInstanton):
         else:
             x = -np.log(abs((self.phi_bar-self.phi_absMin) / 
                             (self.phi_metaMin-self.phi_absMin)))
-        xincrease = 5.0 
+        xincrease = 5.0
             # The relative amount to increase x by if there is no upper bound.
         # --
         # Set r parameters
@@ -1040,7 +1035,12 @@ class InstantonWithGravity(SingleFieldInstanton):
         integration_args = (dr0, epsfrac, epsabs, drmin, rmax)
         rf = None
         while True:
-            delta_phi0 = 0.01*np.exp(-x)*delta_phi #fixmefixmefixme
+            #delta_phi0 = np.exp(-x)*delta_phi #fixmefixmefixme
+            print "Barrier = {}".format(self.findBarrierLocation())
+            print "V at Barrier = {}".format(self.V(self.findBarrierLocation()))
+            delta_phi0 = np.exp(-x)*self.findBarrierLocation()
+            print 'x = {}'.format(x)
+            print 'delta_phi0_ = {}'.format(delta_phi0)
             # r0, phi0, dphi0 = self.initialConditions(x, rmin, thinCutoff)
             ry0 = self.initialConditions(delta_phi0, rmin, delta_phi_cutoff)
             if not np.isfinite(ry0[0]) or not np.isfinite(x):
@@ -1054,6 +1054,7 @@ class InstantonWithGravity(SingleFieldInstanton):
             rf, yf, ctype = self.integrateProfile(r0, y0, *integration_args)
             # Check for overshoot, undershoot
             if ctype == "converged":
+                print 'Great success!! y = {}'.format(yf)
                 break
             elif ctype == "undershoot": # x is too low
                 xmin = x
@@ -1063,6 +1064,7 @@ class InstantonWithGravity(SingleFieldInstanton):
                 x = .5*(xmin+xmax)
             # Check if we've reached xtol
             if (xmax-xmin) < xtol:
+                print("x tolerance check passed")
                 break
                     
         # Integrate a second time, this time getting the points along the way
@@ -1120,7 +1122,7 @@ class InstantonWithGravity(SingleFieldInstanton):
         Not implemented.
         """
         #raise NotImplementedError
-        return 0.
+        return np.inf
 
 class WallWithConstFriction(SingleFieldInstanton):
     """
