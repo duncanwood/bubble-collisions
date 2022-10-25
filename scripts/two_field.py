@@ -116,9 +116,14 @@ def runScript(res, fname, xsep=1.0):
        raise RuntimeError("Didn't reach tfix. Aborting.")
 
     print('tmin = ', t0)
-    print('rmax = ', max(r))
+    print('rmin=', min(r))
+    print('rmax = ', 1.2*max(r))
     print('phiF = ', phiF)
     print('phiT = ', phiT)
+    print(m,c,a,g,h,j,f)
+    print('tmax=',tfix)
+
+    #make a text file and fill it with numbers
 
 if __name__ == "__main__":
     import argparse
