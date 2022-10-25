@@ -1,5 +1,5 @@
 import math
-from ma import cosh
+from math import cosh
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -9,6 +9,7 @@ import sys
 from matplotlib import cm
 import scipy.interpolate as intp
 from scipy.optimize import fmin
+import pickle
 
 inFile = sys.argv[1]
 data = simulation.readFromFile(inFile)
@@ -26,13 +27,17 @@ aa = []
 pix1 = []
 pix2 = []
 
-m = 0.01
-c = 0.002
-a = 0.00083
-g = 0.000001
-f = 1.0
-h = 1.e-7
-j = 0.000001
+try:
+    with open('two_field.info', 'r') as f:
+        (t0, minr, maxr, phiF, phiT, m, c, a, g, h, j, f, tfix ) = pickle.load(f)
+except:
+    m = 0.01
+    c = 0.002
+    a = 0.00083
+    g = 0.000001
+    f = 1.0
+    h = 1.e-7
+    j = 0.000001
 
 def V2D(x,y):
     return m**2*(x**2 + y**2) - a*(x**2 + y**2)**2 + c*(x**2 + y**2)**3 + g*np.sin(x/f) - j*np.sin(y/f) + h

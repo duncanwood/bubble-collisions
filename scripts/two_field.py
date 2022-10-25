@@ -6,6 +6,7 @@ from bubble_collisions.derivsAndSmoothing import deriv14
 import matplotlib.pyplot as plt
 import scipy.interpolate as intp
 import scipy.optimize
+import pickle
 
 def runScript(res, fname, xsep=1.0):
     """
@@ -122,6 +123,11 @@ def runScript(res, fname, xsep=1.0):
     print('phiT = ', phiT)
     print(m,c,a,g,h,j,f)
     print('tmax=',tfix)
+
+    exportVariables = (t0, min(r), 1.2*max(r), phiF, phiT, m, c, a, g, h, j, f, tfix ) 
+
+    with open('two_field.info', 'w') as f:
+        pickle.dump(exportVariables ,f)
 
     #make a text file and fill it with numbers
 
