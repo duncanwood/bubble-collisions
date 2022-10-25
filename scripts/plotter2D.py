@@ -16,8 +16,8 @@ data = simulation.readFromFile(inFile)
 Ndata = np.array([d[0] for d in data])
 xnum = 1000
 ynum = 1000
-x = np.linspace(0.01,41.65, xnum)
-N_list = np.linspace(0.0347,10.0, ynum)
+x = np.linspace(0.01,1069., xnum)
+N_list = np.linspace(0.89,10.0, ynum)
 
 phi1 = []
 phi2 = []
@@ -26,19 +26,19 @@ aa = []
 pix1 = []
 pix2 = []
 
-m = 0.2
-c = 0.1
-a = 0.1165
-g = 0.004
+m = 0.01
+c = 0.002
+a = 0.00083
+g = 0.000001
 f = 1.0
-h = 0.0003
-j = 0.0001
+h = 1.e-7
+j = 0.000001
 
 def V2D(x,y):
     return m**2*(x**2 + y**2) - a*(x**2 + y**2)**2 + c*(x**2 + y**2)**3 + g*np.sin(x/f) - j*np.sin(y/f) + h
 def V2Dvec(x):
     return V2D(x[0],x[1])
-meta_phi = np.array([-0.05, 0.001])
+meta_phi = np.array([0.02, 0.002])
 meta_vac=V2Dvec(meta_phi)
 rH = math.sqrt(3/(8*math.pi)/meta_vac)
 print(meta_phi, meta_vac, rH)
@@ -210,12 +210,3 @@ plt.xlabel("pi1")
 plt.title("pi1 pi2, x={:01f}".format(x[-1]))
 plt.legend()
 plt.savefig("pi1_pi2_xmax.png")
-
-plt.figure()
-for i in range(6):
-    plt.plot(x,aa[len(N_list)/6*i]/(afit[0]*np.sqrt(N_list[len(N_list)/6*i])),label='a @ t={:03f}'.format(N_list[len(N_list)/6*i]))
-plt.plot(x,aa[-4]/(afit[0]*np.sqrt(N_list[-4])),label='a @ t={:03f}'.format(N_list[-4]))
-plt.xlabel("radius")
-plt.title("a / sqrt(N")
-plt.legend()
-plt.savefig("a_sqrt_time_x.png")

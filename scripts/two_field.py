@@ -19,17 +19,17 @@ def runScript(res, fname, xsep=1.0):
     a = 0.123
     g = 0.002
     f = 1.0
-    h = 0.0008
+    h = 0.0003
     j = 0.001
     phiF = (0.7,0.05), phiT = (0.01,-0.01) can go for a long time before failing t ~ 500
     """
-    m = 0.01
-    c = 0.0001
-    a = 0.0002
-    g = 0.00002
+    m = 0.009
+    c = 0.01
+    a = 0.00174
+    g = 0.0000017
     f = 1.0
-    h = 0.00001
-    j = 0.000001
+    h = 7.e-8
+    j = 0.0000005
 
     model = models.TiltedHat(
         m=m, a=a, c=c, g=g, f=f, h=h, j=j)
@@ -40,22 +40,23 @@ def runScript(res, fname, xsep=1.0):
         return model.dV(y,True)
 
     plt.figure()
-    phi_list = np.linspace(-0.1,1.1,100)
+    phi_list = np.linspace(-0.1,1.1,1000)
     V_list = [model.V((i, 0.005)) for i in phi_list]
     plt.plot(phi_list,V_list)
     plt.yscale("log")
     plt.savefig("V_1_test.pdf")
 
-    phiT = scipy.optimize.minimize(model.V, (0.0,0.0)).x
-    phiF_guess = np.array([0.9, 0.005])
-    phiF_bounds = ((0.8*phiF_guess[0],1.2*phiF_guess[0]),(-1.1*phiF_guess[1],1.1*phiF_guess[1]))
+    phiT = scipy.optimize.minimize(model.V, (0.02,0.002)).x
+    phiF_guess = np.array([.25, 0.005])
+    phiF_bounds = ((0.5*phiF_guess[0],1.5*phiF_guess[0]),(phiF_guess[1], phiF_guess[1]))
     phiF = scipy.optimize.minimize(model.V, phiF_guess, bounds=phiF_bounds).x
     print 'phiF: {}\nphiT: {}\nVF: {}\nVT: {}'.format(phiF, phiT, model.V(phiF), model.V(phiT))
 
     path2D = (np.array((phiT, phiF)))
     tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_class=tunneling1D.InstantonWithGravity, tunneling_init_params={}, 
-    tunneling_findProfile_params={"phitol":1e-2, "xtol": 1.e-4})
-    #tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_init_params={})
+    tunneling_findProfile_params={"phitol":1e-4, "xtol": 1.e-12, "thinCutoff": 5e-3, "npoints": 5000})
+    #tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_findProfile_params=
+    #{"phitol": 1e-5, "xtol": 1e-12, "thinCutoff": 5e-3, "npoints": 5000}, deformation_class= pd.Deformation_Spline, verbose=True)
 
     r = tobj.profile1D.R
 

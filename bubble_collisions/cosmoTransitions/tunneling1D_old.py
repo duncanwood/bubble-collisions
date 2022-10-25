@@ -958,7 +958,7 @@ class InstantonWithGravity(SingleFieldInstanton):
                 # But, it's a perfectly valid solution if dphi goes to 0 faster.
                 if y1[3] < 0 and (y1 < 25*epsabs)[2]:
                     # linearly extrapolate to where rho = 0:
-                    print "checking dphi ?= 0"
+                    print "checking dphi"
                     dr = -y1[2]/y1[3]
                     r,y = r1+dr, y1+dydr1*dr
                     if (abs(y) < 3*epsabs)[1]: 
@@ -1043,13 +1043,13 @@ class InstantonWithGravity(SingleFieldInstanton):
         # --
         integration_args = (dr0, epsfrac, epsabs, drmin, rmax)
         rf = None
-        #tries = 0
+        tries = 0
         while True:
-            #if tries == 0: delta_phi0 = self.findBarrierLocation()
-            delta_phi0 = np.exp(-x)*delta_phi #fixmefixmefixme
+            if tries == 0: delta_phi0 = self.findBarrierLocation()
+            #delta_phi0 = np.exp(-x)*delta_phi #fixmefixmefixme
             print "Barrier = {}".format(self.findBarrierLocation())
             print "V at Barrier = {}".format(self.V(self.findBarrierLocation()))
-            #delta_phi0 = np.exp(-x)*self.findBarrierLocation()
+            delta_phi0 = np.exp(-x)*self.findBarrierLocation()
             print 'x = {}'.format(x)
             print 'delta_phi0_ = {}'.format(delta_phi0)
             # r0, phi0, dphi0 = self.initialConditions(x, rmin, thinCutoff)
@@ -1078,6 +1078,7 @@ class InstantonWithGravity(SingleFieldInstanton):
             # Check if we've reached xtol
             if (xmax-xmin) < xtol:
                 print("x tolerance check passed")
+                skoopaskidli
                 break
                     
         # Integrate a second time, this time getting the points along the way

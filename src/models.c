@@ -366,6 +366,88 @@ int init_tilted_hat_type() {
     return 0;
 }
 
+#pragma mark --Tilted hat 1D
+
+// A tilted hat model with a two-field potential and one field set to constant
+// from arxiv:2001.09160 with a constant offset "h"
+
+typedef struct {
+    ModelObject base;
+    double m;
+    double a;
+    double c;
+    double g;
+    double f;
+    double h;
+    double j;
+    double phi2;
+} TiltedHat1DObject;
+
+static int tilted_hat_1D_V(
+    TiltedHat1DObject *self, 
+    npy_intp numpts, npy_intp ny, double *y_in, double *y_out)
+{
+    npy_intp i;
+    for (i=0; i<numpts; i++) {
+        double phi1 = y_in[i*ny];
+        y_out[i] = pow(self->m,2)*(pow(phi1,2) + pow(self->phi2,2)) - 
+                    self->a*pow(pow(phi1,2) + pow(self->phi2,2),2) + 
+                    self->c*pow(pow(phi1,2) + pow(self->phi2,2),3) + self->g*sin(phi1*pow(self->f,-1)) - self->j*sin(self->phi2*pow(self->f,-1)) + self->h;
+    }
+    return 0;
+}
+
+static int tilted_hat_1D_dV(
+    TiltedHat1DObject *self, 
+    npy_intp numpts, npy_intp ny, double *y_in, double *y_out)
+{
+    npy_intp i;
+    for (i=0; i<numpts; i++) {
+        double phi1 = y_in[i*ny];
+        y_out[i] = self->g*cos(phi1*pow(self->f,-1))*pow(self->f,-1) + 2*phi1*pow(self->m,2) - 
+                         4*self->a*phi1*(pow(phi1,2) + pow(self->phi2,2)) + 
+                         6*self->c*phi1*pow(pow(phi1,2) + pow(self->phi2,2),2);
+                         6*self->c*self->phi2*pow(pow(phi1,2) + pow(self->phi2,2),2);
+    }
+    return 0;
+}
+
+static int tilted_hat_1D_init(TiltedHat1DObject* self, PyObject *args, 
+                             PyObject *keywds) {
+    static char *kwlist[] = {"m","a","c","g","f","h","j","phi2",NULL};
+    int success = PyArg_ParseTupleAndKeywords(
+        args, keywds, "dddddddd", kwlist, &self->m, &self->a, &self->c, &self->g, &self->f, &self->h, &self->j, &self->phi2);
+    if (!success) return -1;
+    self->base.V = (ScalarFunc)tilted_hat_1D_V;  
+    self->base.dV = (ScalarFunc)tilted_hat_1D_dV;
+    self->base.nfields = 1;
+    return 0;
+}
+
+static PyTypeObject tilted_hat_1D_type = {
+    PyObject_HEAD_INIT(NULL)
+};
+
+static const char *tilted_hat_1D_docstring = 
+"TiltedHat(m, a, c, g, f, h, j, phi2)\n"
+"\n"
+"A tilted hat model with two scalar fields with one set to phi2 constant.\n"
+"From arxiv:2001.09160\n";
+
+int init_tilted_hat_1D_type() {
+    tilted_hat_1D_type.tp_base = &model_object_type;
+    tilted_hat_1D_type.tp_basicsize = sizeof(TiltedHat1DObject);
+    tilted_hat_1D_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    tilted_hat_1D_type.tp_name = "models.TiltedHat1D";
+    tilted_hat_1D_type.tp_doc = tilted_hat_1D_docstring;
+    tilted_hat_1D_type.tp_init = (initproc)tilted_hat_1D_init;
+    
+    if (PyType_Ready(&tilted_hat_1D_type) < 0)
+        return -1;
+    Py_INCREF(&tilted_hat_1D_type);
+    return 0;
+}
+
 
 
 #pragma mark --Generic piecewise, no hilltop
@@ -828,6 +910,8 @@ initmodels(void)
         PyModule_AddObject(module, "TestModel", (PyObject *)&test_model_type);
     if(init_tilted_hat_type() >= 0)
         PyModule_AddObject(module, "TiltedHat", (PyObject *)&tilted_hat_type);
+    if(init_tilted_hat_1D_type() >= 0)
+        PyModule_AddObject(module, "TiltedHat1D", (PyObject *)&tilted_hat_1D_type);
     if(init_genericPiecewise_noHilltop_type() >= 0)
         PyModule_AddObject(module, "GenericPiecewise_NoHilltop_Model", 
             (PyObject *)&genericPiecewise_noHilltop_type);

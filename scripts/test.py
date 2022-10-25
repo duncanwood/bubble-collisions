@@ -9,30 +9,30 @@ from bubble_collisions.cosmoTransitions import tunneling1D
 from bubble_collisions.derivsAndSmoothing import deriv14, smooth
 
 def runSimulations(overwrite):
-    mu = 0.01
-    omega = 0.054288352331898125
-    Delta_phi = 0.000793447464875
-    phi_vac = 3.0
+    
+    m = 0.01
+    c = 1.e-4
+    a = 1.79e-4
+    g = 5e-6
+    f = 1.0
+    h = 1.e-5
+    j = 1.e-5
+    phi2 = 0.005
 
-    omega = .4
-
-    model = models.GenericPiecewise_NoHilltop_Model(
-        mu=mu, omega=omega, Delta_phi=Delta_phi, phi0=0.0)
+    model = models.TiltedHat1D(
+        m=m, a=a, c=c, g=g, f=f, h=h, j=j, phi2=phi2)
 
     def V(y):
         return model.V(y,True)
     def dV(y):
         return model.dV(y,True)
-    phiF = 0.0
-    phiT = Delta_phi
 
-    #tobj0 = tunneling1D_old.bubbleProfile(phiT, phiF, V, dV, alpha=3)
-    #tobj0.kappa = 8*np.pi
-    #p0 = tobj0.findProfile(xtol=1e-7, phitol=phiT*1e-6, thinCutoff=2e-3,
-    #                        npoints=3000, verbose=True)
-    tobj = tunneling1D.InstantonWithGravity(phiT, phiF, V, dV)
+    phiF = 0.85
+    phiT = -0.03
+
+    tobj = tunneling1D.SingleFieldInstanton(phiT, phiF, V, dV)
     profile = tobj.findProfile(
-        xtol=1e-7, phitol=1e-6, thinCutoff=2e-3, npoints=5000)
+        xtol=1e-15, phitol=1e-5, thinCutoff=1e-2, npoints=1000)
 
     r, phi = profile.R, profile.Phi[:,np.newaxis] # get phi to have shape (nx,1)
     dphi = profile.dPhi[:,np.newaxis]

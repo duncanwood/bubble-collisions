@@ -298,19 +298,20 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		dwdx = [da0dx, da1dx, dalphdx, d2a0dx2, d2a1dx2, d2alphdx2]
 		return dwdx
 
-	ds_radius = np.sqrt(3/(8*np.pi*Vmin))
-	print("dS radius:", ds_radius)
+	ds_radius = np.sqrt(3/(8*np.pi*Vmin))[0]
+	ds_radius_ext = np.sqrt(3/(8*np.pi*V(phiF)))
+	print "dS radius interior: {}".format(ds_radius)
+	print "dS radius exterior: {}".format(ds_radius_ext)
 	winit = [1.0, 1/ds_radius, 1.0, 0.0, 0.0, 0.0]
 	wsoln = odeint(diffeq, winit, x)
 	
-	print 'Min of V(y): {}'.format(Vmin)
 	plt.figure()
 	plt.plot(x, wsoln[:,0], 'b', label=r"Calculated $a$")
 	plt.plot(x, wsoln[:,2], 'g', label=r"Calculated $\alpha$")
-	plt.plot(x, 0*wsoln[:,0], 'k--')
 	#plt.plot(x,(1-x**2/(ds_radius)**2)**(0.5), 'g-', alpha=0.5, label=r"Theoretical $\alpha$" )
 	#plt.plot(x,(1-x**2/(ds_radius)**2)**(-0.5), 'b-',alpha=0.5, label=r"Theoretical $a$")
-	plt.axvline(x=ds_radius,color='red')
+	plt.axvline(x=ds_radius,color='black', label=r"Interior dS rad")
+	plt.axvline(x=ds_radius_ext, color='gray', label=r"Exterior ds rad")
 	plt.legend()
 	plt.ylim(-0.1,2.0)
 	plt.savefig("initial.pdf")
@@ -340,9 +341,9 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	plt.plot(x, 0*np.ones_like(x), 'r--', label=r"Ricci 3 scalar curvature dS")
 	plt.plot(x, R4scalar, 'g', label=r"Ricci 4 scalar curvature")
 	plt.plot(x, 12/ds_radius**2*np.ones_like(x), 'g--', label=r"Ricci 4 scalar curvature dS")
-	plt.axvline(x=ds_radius,color='black', label="dS radius")
+	plt.axvline(x=ds_radius,color='black', label="Interior dS rad")
+	plt.axvline(x=ds_radius_ext,color='gray', label="Exterior dS rad")
 	plt.legend()
-	plt.ylim(-1,1)
 	plt.xlabel("r")
 	plt.savefig("scalar_curvature.pdf")
 
@@ -365,8 +366,8 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		a1 = np.array(wsoln[:,1])
 		a2 = 0
 		alpha0 = np.array(wsoln[:,2])
-		#alpha1 = np.array(-wsoln[:,1])
-		alpha1 = np.array(0*wsoln[:,1])
+		alpha1 = np.array(-wsoln[:,1]/wsoln[:,0])
+		#alpha1 = np.array(0*wsoln[:,1])
 
 	plt.figure()
 	plt.plot(x,a1, 'b')
