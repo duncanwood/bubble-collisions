@@ -76,7 +76,8 @@ AA = np.array(aa)
 Alpha = np.array(alphaa)
 Pix1 = np.array(pix1)
 Pix2 = np.array(pix2)
-momemconstr = alphaintpx - Alpha*(4*np.pi*Alpha*AA*(Pix1*phi1intpx + Pix2*phi2intpx) + AA*aintpxt - aintpx*aintpt)/(aintpt*AA)
+fieldMomentum = Alpha*(4*np.pi*Alpha*AA*(Pix1*phi1intpx + Pix2*phi2intpx) + AA*aintpxt - aintpx*aintpt)/(aintpt*AA) 
+momemconstr = alphaintpx - fieldMomentum
 
 """ax0 = AA.T[0]
 afit = np.polyfit(np.sqrt(N_list),ax0,deg=1)
@@ -126,6 +127,17 @@ plt.yscale('log')
 plt.title("momentum constraint")
 plt.legend()
 plt.savefig("momemconstr_time_x.png")
+
+plt.figure()
+for i in range(4):
+    plt.plot(x,abs((2*momemconstr/(alphaintpx+fieldMomentum))[len(N_list)/4*i]),label='alphconstr @ t={:03f}'.format(N_list[len(N_list)/4*i]))
+plt.plot(x,abs(momemconstr[-4]),label='alphconstr @ t={:03f}'.format(N_list[-4]))
+plt.xlabel("radius")
+#plt.xscale('log')
+plt.yscale('log')
+plt.title("momentum constraint as fraction of momentum")
+plt.legend()
+plt.savefig("momemconstr_time_x_fraction.png")
 
 plt.figure()
 for i in range(6):
