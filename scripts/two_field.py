@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 import scipy.interpolate as intp
 import scipy.optimize
 import pickle
+import ConfigParser
 
-def runScript(res, fname, xsep=1.0):
+def runScript(res, fname, config, xsep=1.0):
     """
     Run a high-resolution simulation for the benchmark point.
     The 'res' input parameter specifies the overall resolution relative
@@ -24,13 +25,26 @@ def runScript(res, fname, xsep=1.0):
     j = 0.001
     phiF = (0.7,0.05), phiT = (0.01,-0.01) can go for a long time before failing t ~ 500
     """
-    m = 0.009
-    c = 0.01
-    a = 0.00174
-    g = 0.0000017
-    f = 1.0
-    h = 7.e-8
-    j = 0.0000005
+    try:
+        with open(config) as f:
+            cp = ConfigParser.ConfigParser()
+            cp.readfp(f)
+            m = cp.getfloat('params', "m") 
+            c = cp.getfloat('params', "c") 
+            a = cp.getfloat('params', "a") 
+            g = cp.getfloat('params', "g") 
+            f = cp.getfloat('params', "f") 
+            h = cp.getfloat('params', "h") 
+            j = cp.getfloat('params', "j") 
+    except Exception as e:
+        m = 0.009
+        c = 0.01
+        a = 0.00174
+        g = 0.0000017
+        f = 1.0
+        h = 7.e-8
+        j = 0.0000005
+    print(config,m,c,a,g,f,h,j)
 
     model = models.TiltedHat(
         m=m, a=a, c=c, g=g, f=f, h=h, j=j)
@@ -142,6 +156,8 @@ if __name__ == "__main__":
         'default benchmark case.')
     parser.add_argument("-n", "--non_ident", action="store_true", help=
         "Run non-identical bubble collision")
+    parser.add_argument("-c", "--config", dest="config", type=str, default="two_field.config", help="Point to configuration file")
+
 
 
     args = parser.parse_args()
@@ -153,6 +169,6 @@ if __name__ == "__main__":
         fname = fname_base+"_%i.dat" % res
     else:
         fname = fname_base+"_%s.dat" % res
-    runScript(res, fname)
+    runScript(res, fname, args.config)
 
 
