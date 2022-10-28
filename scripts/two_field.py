@@ -104,11 +104,12 @@ def runScript(res, fname, xsep=1.0):
     plt.figure()
 
     simulation.setModel(model)
-    tfix = 10.0
+    tfix = 100.0
+    rmin = 0.005
     simulation.setFileParams(fname, xres=2, tout=tfix/10.)
     #simulation.setIntegrationParams(mass_osc = model.dV(phiF)[0]/.01)
     t0,x0,y0 = collisionRunner.calcInitialDataFromInst(
-        model, inst1, None, phiF, xsep=1.0, xmin=0.01, xmax = 1.2*np.max(r))
+        model, inst1, None, phiF, xsep=1.0, xmin=rmin, xmax = 1.2*np.max(r))
     
     simulation.setMonitorCallback(
         collisionRunner.monitorFunc2D(50., 120., 1))
@@ -117,14 +118,11 @@ def runScript(res, fname, xsep=1.0):
        raise RuntimeError("Didn't reach tfix. Aborting.")
 
     print('tmin = ', t0)
-    print('rmin=', min(r))
     print('rmax = ', 1.2*max(r))
     print('phiF = ', phiF)
     print('phiT = ', phiT)
-    print(m,c,a,g,h,j,f)
-    print('tmax=',tfix)
 
-    exportVariables = (t0, min(r), 1.2*max(r), phiF, phiT, m, c, a, g, h, j, f, tfix ) 
+    exportVariables = (t0, rmin, 1.2*max(r), phiF, phiT, m, c, a, g, h, j, f, tfix ) 
 
     with open('two_field.info', 'w') as f:
         pickle.dump(exportVariables ,f)

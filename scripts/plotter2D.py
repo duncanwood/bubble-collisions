@@ -13,22 +13,10 @@ import pickle
 
 inFile = sys.argv[1]
 data = simulation.readFromFile(inFile)
-
-Ndata = np.array([d[0] for d in data])
-xnum = 1000
-ynum = 1000
-x = np.linspace(0.01,1069., xnum)
-N_list = np.linspace(0.89,10.0, ynum)
-
-phi1 = []
-phi2 = []
-alphaa = []
-aa = []
-pix1 = []
-pix2 = []
+inInfo = sys.argv[2]
 
 try:
-    with open('two_field.info', 'r') as f:
+    with open(inInfo, 'rb') as f:
         (t0, minr, maxr, phiF, phiT, m, c, a, g, h, j, f, tfix ) = pickle.load(f)
 except:
     m = 0.01
@@ -39,14 +27,27 @@ except:
     h = 1.e-7
     j = 0.000001
 
+Ndata = np.array([d[0] for d in data])
+xnum = 1000
+ynum = 1000
+x = np.linspace(minr, maxr, xnum)
+N_list = np.linspace(t0, tfix, ynum)
+
+phi1 = []
+phi2 = []
+alphaa = []
+aa = []
+pix1 = []
+pix2 = []
+
+
 def V2D(x,y):
     return m**2*(x**2 + y**2) - a*(x**2 + y**2)**2 + c*(x**2 + y**2)**3 + g*np.sin(x/f) - j*np.sin(y/f) + h
 def V2Dvec(x):
     return V2D(x[0],x[1])
-meta_phi = np.array([0.02, 0.002])
-meta_vac=V2Dvec(meta_phi)
+meta_phi = phiT
+meta_vac = V2Dvec(meta_phi)
 rH = math.sqrt(3/(8*math.pi)/meta_vac)
-print(meta_phi, meta_vac, rH)
 
 for i in range(len(N_list)):
     Y=simulation.valsOnGrid(
