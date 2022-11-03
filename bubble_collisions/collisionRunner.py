@@ -313,7 +313,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	plt.axvline(x=ds_radius,color='black', label=r"Interior dS rad")
 	plt.axvline(x=ds_radius_ext, color='gray', label=r"Exterior ds rad")
 	plt.legend()
-	plt.ylim(-0.1,2.0)
+	plt.ylim(-0.0,2.0)
 	plt.savefig("initial.pdf")
 
 	a0interp = interpolate.UnivariateSpline(x, wsoln[:,0], k=4, s=0)
@@ -328,24 +328,34 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	alpha1interp = interpolate.UnivariateSpline(x, -wsoln[:,1]/wsoln[:,0], k=4, s=0)
 
 	K3scalar = -3*a1interp(x)/(a0interp(x)*alpha0interp(x))
-	R3scalar = 2*x*a0interpx(x)**2-4*a0interp(x)*(2*a0interpx(x) + x*a0interpxx(x))/(x*a0interp(x)**4)
+	R3scalar = (2*x*a0interpx(x)**2-4*a0interp(x)*(2*a0interpx(x) + x*a0interpxx(x)))/(x*a0interp(x)**4)
 	R4scalar = 1/(x*a0interp(x)**4*alpha0interp(x)**3)*(2*x*alpha0interp(x)**3*a0interpx(x)**2 
 	- 2*a0interp(x)*alpha0interp(x)**2*(x*a0interpx(x)*alpha0interpx(x) + 2*alpha0interp(x)*(2*a0interpx(x) + x*a0interpxx(x))) 
-	- 2*a0interp(x)**2*alpha0interp(x)*(alpha0interp(x)*(2*alpha0interpx(x) + x*a0interpxx(x)) - 3*x*a1interp(x)**2) 
-	+ a0interp(x)**3*(-6*x*a1interp(x)*alpha1interp(x) + 6*x*alpha0interp(x)*a0interpxx(x)))
+	- 2*a0interp(x)**2*alpha0interp(x)*(alpha0interp(x)*(2*alpha0interpx(x) + x*alpha0interpxx(x)) - 3*x*a1interp(x)**2) 
+	+ a0interp(x)**3*(-6*x*a1interp(x)*alpha1interp(x) + 6*x*alpha0interp(x)*(a1interp(x)**2/a0interp(x) + a1interp(x)*alpha1interp(x)/alpha0interp(x))))
 	
 	plt.figure()
-	plt.plot(x, K3scalar, 'b', label=r"Extrinsic scalar curvature")
-	plt.plot(x, -3/ds_radius*np.ones_like(x), 'b--', label=r"Extrinsic scalar curvature dS")
 	plt.plot(x, R3scalar, 'r', label=r"Ricci 3 scalar curvature")
 	plt.plot(x, 0*np.ones_like(x), 'r--', label=r"Ricci 3 scalar curvature dS")
 	plt.plot(x, R4scalar, 'g', label=r"Ricci 4 scalar curvature")
-	plt.plot(x, 12/ds_radius**2*np.ones_like(x), 'g--', label=r"Ricci 4 scalar curvature dS")
+	plt.plot(x, 12/ds_radius**2*np.ones_like(x), 'g--', label=r"Ricci 4 scalar curvature dS in")
+	plt.plot(x, 12/ds_radius_ext**2*np.ones_like(x), 'b--', label=r"Ricci 4 scalar curvature dS out")
+	plt.axvline(x=ds_radius,color='black', label="Interior dS rad")
+	plt.axvline(x=ds_radius_ext,color='gray', label="Exterior dS rad")
+	plt.legend()
+	plt.ylim(-20/ds_radius_ext**2, 100/ds_radius_ext**2)
+	plt.xlabel("r")
+	plt.savefig("ricci_scalars.pdf")
+
+	plt.figure()
+	plt.plot(x, K3scalar, 'b', label=r"Extrinsic scalar curvature")
+	plt.plot(x, -3/ds_radius*np.ones_like(x), 'b--', label=r"Extrinsic scalar curvature dS in")
+	plt.plot(x, -3/ds_radius_ext*np.ones_like(x), 'g--', label=r"Extrinsic scalar curvature dS out")
 	plt.axvline(x=ds_radius,color='black', label="Interior dS rad")
 	plt.axvline(x=ds_radius_ext,color='gray', label="Exterior dS rad")
 	plt.legend()
 	plt.xlabel("r")
-	plt.savefig("scalar_curvature.pdf")
+	plt.savefig("ext_scalar.pdf")
 
 	if len(phiF) > 1:
 		phi2 = np.array((wsoln[:,2]*(-x*dVinterp(x)*wsoln[:,0]**3*wsoln[:,2] 
@@ -372,7 +382,8 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	plt.figure()
 	plt.plot(x,a1, 'b')
 	plt.plot(x,alpha1,'g')
-	plt.savefig("alpha1.pdf")
+	plt.plot(x, a1/(a0*alpha0), 'k')
+	plt.savefig("initial_time_deriv.pdf")
 
 	N = len(phiF)
 	Y = np.empty((len(x), N*2+2))

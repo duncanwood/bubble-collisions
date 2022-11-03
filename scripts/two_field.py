@@ -37,13 +37,13 @@ def runScript(res, fname, config, xsep=1.0):
             h = cp.getfloat('params', "h") 
             j = cp.getfloat('params', "j") 
     except Exception as e:
-        m = 0.009
-        c = 0.01
-        a = 0.00174
-        g = 0.0000017
+        m = 0.0058
+        c = 0.002
+        a = 0.00051
+        g = 0.0000001
         f = 1.0
         h = 7.e-8
-        j = 0.0000005
+        j = 0.0000001
     print(config,m,c,a,g,f,h,j)
 
     model = models.TiltedHat(
@@ -61,15 +61,15 @@ def runScript(res, fname, config, xsep=1.0):
     plt.yscale("log")
     plt.savefig("V_1_test.pdf")
 
-    phiT = scipy.optimize.minimize(model.V, (0.02,0.002)).x
-    phiF_guess = np.array([.25, 0.005])
+    phiT = scipy.optimize.minimize(model.V, (0.0,0.002)).x
+    phiF_guess = np.array([.34, 0.005])
     phiF_bounds = ((0.5*phiF_guess[0],1.5*phiF_guess[0]),(phiF_guess[1], phiF_guess[1]))
     phiF = scipy.optimize.minimize(model.V, phiF_guess, bounds=phiF_bounds).x
     print 'phiF: {}\nphiT: {}\nVF: {}\nVT: {}'.format(phiF, phiT, model.V(phiF), model.V(phiT))
 
     path2D = (np.array((phiT, phiF)))
     tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_class=tunneling1D.InstantonWithGravity, tunneling_init_params={}, 
-    tunneling_findProfile_params={"phitol":1e-4, "xtol": 1.e-12, "thinCutoff": 5e-3, "npoints": 5000})
+    tunneling_findProfile_params={"phitol":1e-4, "xtol": 1.e-14, "thinCutoff": 5e-3, "npoints": 5000})
     #tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_findProfile_params=
     #{"phitol": 1e-5, "xtol": 1e-12, "thinCutoff": 5e-3, "npoints": 5000}, deformation_class= pd.Deformation_Spline, verbose=True)
 
@@ -118,15 +118,15 @@ def runScript(res, fname, config, xsep=1.0):
     plt.figure()
 
     simulation.setModel(model)
-    tfix = 100.0
-    rmin = 0.005
+    tfix = 1.0
+    rmin = 0.01
     simulation.setFileParams(fname, xres=2, tout=tfix/10.)
     #simulation.setIntegrationParams(mass_osc = model.dV(phiF)[0]/.01)
     t0,x0,y0 = collisionRunner.calcInitialDataFromInst(
-        model, inst1, None, phiF, xsep=1.0, xmin=rmin, xmax = 1.2*np.max(r))
+        model, inst1, None, phiF, xsep=1.0, xmin=rmin, xmax = 1.2*np.max(r), rel_t0=1.e-5)
     
     simulation.setMonitorCallback(
-        collisionRunner.monitorFunc2D(50., 120., 1))
+        collisionRunner.monitorFunc2D(40., 110., 1))
     t, x, y = simulation.runCollision(x0,y0,t0,tfix, growBounds=False)
     if (t < tfix*.9999):
        raise RuntimeError("Didn't reach tfix. Aborting.")
