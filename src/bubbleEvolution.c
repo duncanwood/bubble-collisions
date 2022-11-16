@@ -58,6 +58,7 @@ static double cfl = 0.2; // The size of the timestep relative to the step-size.
 static int stepsPerRegrid = 2;
 static double minStepsPerPeriod = 30.0; // where a period is given by the largest frequency of oscillations about a minimum.
 static double highestMass = 1e-100; // used for determining the period.
+static double t_metric = 1/1.5; //set max dt by characteristic change in a, alpha 
 
 // The following are for the monitor function
 static PyObject *monitor_callback;
@@ -231,16 +232,16 @@ PyMethodDef setIntegrationParams_methdef = {
 };
 
 PyObject *setIntegrationParams(PyObject *self, PyObject *args, PyObject *keywds) {
-    static char *kwlist[] = {"cfl", "minStepsPerPeriod", "mass_osc", "stepsPerRegrid", "minRegionWidth", "Nmax", NULL};
+    static char *kwlist[] = {"cfl", "minStepsPerPeriod", "t_metric", "mass_osc", "stepsPerRegrid", "minRegionWidth", "Nmax", NULL};
 	
-    if (!PyArg_ParseTupleAndKeywords(args, keywds, "|dddiii", kwlist, 
-									 &cfl, &minStepsPerPeriod, &highestMass, &stepsPerRegrid, &minRegionWidth, &Nmax0))
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "|ddddiii", kwlist, 
+									 &cfl, &minStepsPerPeriod, &t_metric, &highestMass, &stepsPerRegrid, &minRegionWidth, &Nmax0))
 		return NULL;
 
 	LOGMSG("setIntegrationParams: \n\t"
-		   "cfl = %0.3f; minStepsPerPeriod = %0.2f; mass_osc = %f\n\t"
+		   "cfl = %0.3f; minStepsPerPeriod = %0.2f; t_metric = %0.2f; mass_osc = %f\n\t"
 		   "stepsPerRegrid = %i; minRegionWidth = %i; Nmax = %i",
-		   cfl, minStepsPerPeriod, highestMass, stepsPerRegrid, minRegionWidth, Nmax0);
+		   cfl, minStepsPerPeriod, t_metric, highestMass, stepsPerRegrid, minRegionWidth, Nmax0);
 	
 	Py_INCREF(Py_None);
 	return Py_None;
@@ -630,7 +631,8 @@ int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, d
 		}
 		A = alphaX[i]/(pow(3*x[i],1/2)*aX[i])*pow(A,1/2); // add extra fields inside sqrt above 
 		dY_out[ny*i+ny-1] = A; // da/dN
-		dY_out[ny*i+ny-2] = -A/aX[i]; // dalpha/dN
+		//dY_out[ny*i+ny-2] = A/(aX[i]*alphaX[i]); // dalpha/dN
+		dY_out[ny*i+ny-2] = pow(A/aX[i],4);
 		//dY_out[ny*i+ny-3] = 0; // db/dN
 
 	}
@@ -863,8 +865,7 @@ double evolveBubbles(double *x0, double *y0, int nx0, double t0, double tmax, do
 		if (1) {
 			// Finally, the step size shouldn't be much smaller than the characteristic change in alpha and a.
 			// For now, approximate this just by the first term.
-			double t_metric = 1./1.5; // really tanh N + 1/(2 tanh N), but this only matters in the large N limit anyways.
-			LOGMSG("before t_met dt = %0.3e", dt);
+			//double t_metric = 1./1.5; // really tanh N + 1/(2 tanh N), but this only matters in the large N limit anyways.
 			if (dt * nsteps * minStepsPerPeriod > t_metric) {
 				dt = t_metric/(nsteps*minStepsPerPeriod);
 			        LOGMSG("after t_met dt = %0.3e", dt); 

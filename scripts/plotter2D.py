@@ -17,7 +17,7 @@ inInfo = sys.argv[2]
 
 try:
     with open(inInfo, 'rb') as f:
-        (t0, minr, maxr, phiF, phiT, m, c, a, g, h, j, f, tfix ) = pickle.load(f)
+        (t0, minr, dS_ext, phiF, phiT, m, c, a, g, h, j, f, tfix ) = pickle.load(f)
 except:
     m = 0.01
     c = 0.002
@@ -30,7 +30,7 @@ except:
 Ndata = np.array([d[0] for d in data])
 xnum = 1000
 ynum = 1000
-x = np.linspace(minr, maxr, xnum)
+x = np.linspace(minr, dS_ext, xnum)
 N_list = np.linspace(t0, tfix, ynum)
 
 phi1 = []
@@ -75,8 +75,8 @@ Phi1 = np.array(phi1)
 Phi2 = np.array(phi2)
 AA = np.array(aa)
 Alpha = np.array(alphaa)
-Pix1 = np.array(pix1)
-Pix2 = np.array(pix2)
+Pix1 = Alpha*np.array(pix1)/AA
+Pix2 = Alpha*np.array(pix2)/AA
 fieldMomentum = Alpha*(4*np.pi*Alpha*AA*(Pix1*phi1intpx + Pix2*phi2intpx) + AA*aintpxt - aintpx*aintpt)/(aintpt*AA) 
 momemconstr = alphaintpx - fieldMomentum
 
@@ -109,14 +109,14 @@ plt.colorbar()
 plt.savefig("a_contour.png")
 plt.figure()
 
-plt.figure()
+"""plt.figure()
 plt.plot(x,aintp(x,N_list[0]),label='a @ t={:03f}'.format(N_list[0]))
 plt.plot(x,alphaintp(x,N_list[0]),label='alpha @ t={:03f}'.format(N_list[0]))
 plt.xlabel("radius")
 #plt.xscale('log')
 plt.title("a alpha")
 plt.legend()
-plt.savefig("a_alph_init.png")
+plt.savefig("a_alph_init.png")"""
 
 plt.figure()
 for i in range(4):
@@ -129,7 +129,7 @@ plt.title("momentum constraint")
 plt.legend()
 plt.savefig("momemconstr_time_x.png")
 
-plt.figure()
+"""plt.figure()
 for i in range(4):
     plt.plot(x,abs((2*momemconstr/(alphaintpx+fieldMomentum))[len(N_list)/4*i]),label='alphconstr @ t={:03f}'.format(N_list[len(N_list)/4*i]))
 plt.plot(x,abs(momemconstr[-4]),label='alphconstr @ t={:03f}'.format(N_list[-4]))
@@ -138,7 +138,7 @@ plt.xlabel("radius")
 plt.yscale('log')
 plt.title("momentum constraint as fraction of momentum")
 plt.legend()
-plt.savefig("momemconstr_time_x_fraction.png")
+plt.savefig("momemconstr_time_x_fraction.png")"""
 
 plt.figure()
 for i in range(6):
@@ -162,9 +162,53 @@ plt.savefig("phi2_time_x.png")
 plt.figure()
 
 plt.figure()
+for i in range(6):
+    plt.plot(x,Pix1[len(N_list)/6*i],label='pi1 @ t={:03f}'.format(N_list[len(N_list)/6*i]))
+plt.plot(x,Pix1[-10],label='pi1 @ t={:03f}'.format(N_list[-10]))
+plt.xlabel("radius")
+#plt.xscale('log')
+plt.title("pi1")
+plt.legend()
+plt.savefig("pi1_time_x.png")
+plt.figure()
+
+plt.figure()
+for i in range(6):
+    plt.plot(x,Pix2[len(N_list)/6*i],label='pi2 @ t={:03f}'.format(N_list[len(N_list)/6*i]))
+plt.plot(x,Pix2[-10],label='pi2 @ t={:03f}'.format(N_list[-10]))
+plt.xlabel("radius")
+#plt.xscale('log')
+plt.title("pi2")
+plt.legend()
+plt.savefig("pi2_time_x.png")
+plt.figure()
+
+"""plt.figure()
+for i in range(6):
+    plt.plot(x,AA[len(N_list)/6*i],label='a @ t={:03f}'.format(N_list[len(N_list)/6*i]))
+plt.plot(x,AA[-10],label='a @ t={:03f}'.format(N_list[-10]))
+plt.xlabel("radius")
+#plt.xscale('log')
+plt.title("a")
+plt.legend()
+plt.savefig("a_time_x.png")
+plt.figure()
+
+plt.figure()
+for i in range(6):
+    plt.plot(x,alphaa[len(N_list)/6*i],label='alpha @ t={:03f}'.format(N_list[len(N_list)/6*i]))
+plt.plot(x,alphaa[-10],label='alpha @ t={:03f}'.format(N_list[-10]))
+plt.xlabel("radius")
+#plt.xscale('log')
+plt.title("alpha")
+plt.legend()
+plt.savefig("alpha_time_x.png")
+plt.figure()"""
+
+plt.figure()
 nx = 100
-Xp = np.linspace(min(Phi1.T[0])*1.2,max(Phi1.T[0])*.8,nx)[:,None] * np.ones((1,nx))
-Y = np.linspace(min(Phi2.T[0])*1.2,max(Phi2.T[0])*.8,nx)[None,:] * np.ones((nx,1))
+Xp = np.linspace(min(Phi1.T[0]),max(Phi1.T[0]),nx)[:,None] * np.ones((1,nx))
+Y = np.linspace(min(Phi2.T[0]),max(Phi2.T[0]),nx)[None,:] * np.ones((nx,1))
 XY = np.rollaxis(np.array([Xp,Y]), 0, 3)
 Z = V2D(Xp,Y)
 plt.contour(Xp,Y,Z, np.linspace(np.min(Z), np.max(Z), 200), linewidths=0.5, zorder=0)
@@ -180,8 +224,8 @@ plt.savefig("phi1_phi2.png")
 
 plt.figure()
 nx = 100
-Xp = np.linspace(min(Phi1.T[-1])*1.2,max(Phi1.T[-1])*1.2,nx)[:,None] * np.ones((1,nx))
-Y = np.linspace(min(Phi2.T[-1])*1.2,max(Phi2.T[-1])*1.2,nx)[None,:] * np.ones((nx,1))
+Xp = np.linspace(min(Phi1.T[-1]),max(Phi1.T[-1]),nx)[:,None] * np.ones((1,nx))
+Y = np.linspace(min(Phi2.T[-1]),max(Phi2.T[-1]),nx)[None,:] * np.ones((nx,1))
 XY = np.rollaxis(np.array([Xp,Y]), 0, 3)
 Z = V2D(Xp,Y)
 plt.contour(Xp,Y,Z, np.linspace(np.min(Z), np.max(Z), 200), linewidths=0.5, zorder=0)
@@ -197,8 +241,8 @@ plt.savefig("phi1_phi2_xmax.png")
 
 plt.figure()
 nx = 100
-Xp = np.linspace(min(Phi1.T[xnum/2])*1.2,max(Phi1.T[xnum/2])*1.2,nx)[:,None] * np.ones((1,nx))
-Y = np.linspace(min(Phi2.T[xnum/2])*1.2,max(Phi2.T[xnum/2])*1.2,nx)[None,:] * np.ones((nx,1))
+Xp = np.linspace(min(Phi1.T[xnum/2]),max(Phi1.T[xnum/2]),nx)[:,None] * np.ones((1,nx))
+Y = np.linspace(min(Phi2.T[xnum/2]),max(Phi2.T[xnum/2]),nx)[None,:] * np.ones((nx,1))
 XY = np.rollaxis(np.array([Xp,Y]), 0, 3)
 Z = V2D(Xp,Y)
 plt.contour(Xp,Y,Z, np.linspace(np.min(Z), np.max(Z), 200), linewidths=0.5, zorder=0)
@@ -214,8 +258,8 @@ plt.savefig("phi1_phi2_xhalf.png")
 
 plt.figure()
 nx = 100
-Xp = np.linspace(min(Pix1.T[-1])*1.2,max(Pix1.T[-1])*1.2,nx)[:,None] * np.ones((1,nx))
-Y = np.linspace(min(Pix2.T[-1])*1.2,max(Pix2.T[-1])*1.2,nx)[None,:] * np.ones((nx,1))
+Xp = np.linspace(min(Pix1.T[-1]),max(Pix1.T[-1]),nx)[:,None] * np.ones((1,nx))
+Y = np.linspace(min(Pix2.T[-1]),max(Pix2.T[-1]),nx)[None,:] * np.ones((nx,1))
 XY = np.rollaxis(np.array([Xp,Y]), 0, 3)
 Z = V2D(Xp,Y)
 plt.contour(Xp,Y,Z, np.linspace(np.min(Z), np.max(Z), 200), linewidths=0.5, zorder=0)

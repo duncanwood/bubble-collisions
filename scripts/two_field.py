@@ -16,14 +16,14 @@ def runScript(res, fname, config, xsep=1.0):
     to the default value that was used for the collision_pheno paper.
     """
     """
-    m = 0.2
-    c = 0.1
-    a = 0.123
-    g = 0.002
+    m = 0.0058
+    c = 0.002
+    a = 0.000519
+    g = 0.0000001
     f = 1.0
-    h = 0.0003
-    j = 0.001
-    phiF = (0.7,0.05), phiT = (0.01,-0.01) can go for a long time before failing t ~ 500
+    h = 7.e-8
+    j = 0.0000001
+    phiF = (0.36,0.005), phiT = (0.0,0.002)
     """
     try:
         with open(config) as f:
@@ -39,11 +39,11 @@ def runScript(res, fname, config, xsep=1.0):
     except Exception as e:
         m = 0.0058
         c = 0.002
-        a = 0.00051
+        a = 0.000517
         g = 0.0000001
         f = 1.0
         h = 7.e-8
-        j = 0.0000001
+        j = 0.00000015
     print(config,m,c,a,g,f,h,j)
 
     model = models.TiltedHat(
@@ -55,21 +55,21 @@ def runScript(res, fname, config, xsep=1.0):
         return model.dV(y,True)
 
     plt.figure()
-    phi_list = np.linspace(-0.1,1.1,1000)
-    V_list = [model.V((i, 0.005)) for i in phi_list]
+    phi_list = np.linspace(-0.1,0.6,1000)
+    V_list = [model.V((i, 0.05)) for i in phi_list]
     plt.plot(phi_list,V_list)
     plt.yscale("log")
     plt.savefig("V_1_test.pdf")
 
-    phiT = scipy.optimize.minimize(model.V, (0.0,0.002)).x
-    phiF_guess = np.array([.34, 0.005])
+    phiT = scipy.optimize.minimize(model.V, (-0.0,0.0)).x
+    phiF_guess = np.array([.36, 0.01])
     phiF_bounds = ((0.5*phiF_guess[0],1.5*phiF_guess[0]),(phiF_guess[1], phiF_guess[1]))
     phiF = scipy.optimize.minimize(model.V, phiF_guess, bounds=phiF_bounds).x
     print 'phiF: {}\nphiT: {}\nVF: {}\nVT: {}'.format(phiF, phiT, model.V(phiF), model.V(phiT))
 
     path2D = (np.array((phiT, phiF)))
     tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_class=tunneling1D.InstantonWithGravity, tunneling_init_params={}, 
-    tunneling_findProfile_params={"phitol":1e-4, "xtol": 1.e-14, "thinCutoff": 5e-3, "npoints": 5000})
+    tunneling_findProfile_params={"phitol":1e-4, "xtol": 1.e-14, "thinCutoff": 5e-3, "npoints": 2000})
     #tobj = pd.fullTunneling(path2D, model.V, model.dV, tunneling_findProfile_params=
     #{"phitol": 1e-5, "xtol": 1e-12, "thinCutoff": 5e-3, "npoints": 5000}, deformation_class= pd.Deformation_Spline, verbose=True)
 
@@ -96,11 +96,11 @@ def runScript(res, fname, config, xsep=1.0):
     
     plt.figure()
     nx = 10
-    X = np.linspace(-1.,1.,nx)[:,None] * np.ones((1,nx))
-    Y = np.linspace(-1.,1.,nx)[None,:] * np.ones((nx,1))
+    X = np.linspace(-0.3,0.3,nx)[:,None] * np.ones((1,nx))
+    Y = np.linspace(-0.3,0.3,nx)[None,:] * np.ones((nx,1))
     XY = np.rollaxis(np.array([X,Y]), 0, 3)
     Z = model.V(XY)
-    plt.contour(X,Y,Z, np.linspace(np.min(Z), max(np.max(Z)*.05,np.min(Z)*1.2), 200), linewidths=0.5)
+    plt.contour(X,Y,Z, np.linspace(np.min(Z), np.max(Z), 200), linewidths=0.5)
     plt.colorbar()
     plt.plot(tobj.Phi[:,0], tobj.Phi[:,1], 'b')
     plt.savefig("V2D.png")
@@ -118,25 +118,29 @@ def runScript(res, fname, config, xsep=1.0):
     plt.figure()
 
     simulation.setModel(model)
-    tfix = 1.0
+    tfix = 10.
     rmin = 0.01
+    ds_ext = np.sqrt(3/(8*np.pi*model.V(phiF)))
+    rmax = 1000.
+    t_steps = 40.
+    t_metric = 1.0
     simulation.setFileParams(fname, xres=2, tout=tfix/10.)
-    #simulation.setIntegrationParams(mass_osc = model.dV(phiF)[0]/.01)
+    simulation.setIntegrationParams(minStepsPerPeriod = t_steps, t_metric = t_metric)
     t0,x0,y0 = collisionRunner.calcInitialDataFromInst(
-        model, inst1, None, phiF, xsep=1.0, xmin=rmin, xmax = 1.2*np.max(r), rel_t0=1.e-5)
+        model, inst1, None, phiF, xsep=1.0, xmin=rmin, xmax = rmax, rel_t0=5.e-5)
     
     simulation.setMonitorCallback(
-        collisionRunner.monitorFunc2D(40., 110., 1))
+        collisionRunner.monitorFunc2D(35., 100., 1))
     t, x, y = simulation.runCollision(x0,y0,t0,tfix, growBounds=False)
     if (t < tfix*.9999):
        raise RuntimeError("Didn't reach tfix. Aborting.")
 
     print('tmin = ', t0)
-    print('rmax = ', 1.2*max(r))
+    print('ext dS = ', ds_ext)
     print('phiF = ', phiF)
     print('phiT = ', phiT)
 
-    exportVariables = (t0, rmin, 1.2*max(r), phiF, phiT, m, c, a, g, h, j, f, tfix ) 
+    exportVariables = (t0, rmin, rmax, phiF, phiT, m, c, a, g, h, j, f, tfix ) 
 
     with open('two_field.info', 'w') as f:
         pickle.dump(exportVariables ,f)

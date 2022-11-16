@@ -234,8 +234,8 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	#xT = np.zeros((len(x), len(phiF)), dtype=float)
 
 	if inst1:
-		tck = interpolate.splprep(inst1['phi'].T, u=inst1['x'], s=0)[0]
-		dtck = interpolate.splprep(inst1['dphi'].T, u=inst1['x'], s=0)[0]
+		tck = interpolate.splprep(inst1['phi'].T, u=inst1['x'], k=5, s=1)[0]
+		dtck = interpolate.splprep(inst1['dphi'].T, u=inst1['x'], k=5, s=1)[0]
 		i = (x >= inst1['x'][0]) & (x <= inst1['x'][-1])
 		y[i] += np.array(interpolate.splev(x[i], tck, der=0)).T
 		dy[i] += np.array(interpolate.splev(x[i], dtck, der=0)).T
@@ -325,7 +325,8 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	alpha0interp = interpolate.UnivariateSpline(x, wsoln[:,2], k=4, s=0)
 	alpha0interpx = alpha0interp.derivative()
 	alpha0interpxx = alpha0interpx.derivative()
-	alpha1interp = interpolate.UnivariateSpline(x, -wsoln[:,1]/wsoln[:,0], k=4, s=0)
+	alpha1arr = (wsoln[:,1]/wsoln[:,0])**4
+	alpha1interp = interpolate.UnivariateSpline(x, alpha1arr, k=4, s=0)
 
 	K3scalar = -3*a1interp(x)/(a0interp(x)*alpha0interp(x))
 	R3scalar = (2*x*a0interpx(x)**2-4*a0interp(x)*(2*a0interpx(x) + x*a0interpxx(x)))/(x*a0interp(x)**4)
@@ -366,17 +367,17 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		+ 2*dy2interp(x))*wsoln[:,2] + x*dy2interp(x)*wsoln[:,5]))))
 	else:
 		phi2 = np.array()
-	phi2T = np.ndarray((len(x),len(phiF)),buffer=phi2)
+	phi2T = phi2.T
 	if len(phiF)<=1:
 		a0 = 0
 		a1 = 0
 		a2 = 0
 	else:
-		a0 = np.array(wsoln[:,0])
-		a1 = np.array(wsoln[:,1])
+		a0 = np.array(wsoln[:, 0])
+		a1 = np.array(wsoln[:, 1])
 		a2 = 0
-		alpha0 = np.array(wsoln[:,2])
-		alpha1 = np.array(-wsoln[:,1]/wsoln[:,0])
+		alpha0 = np.array(wsoln[:, 2])
+		alpha1 = np.array(alpha1arr)
 		#alpha1 = np.array(0*wsoln[:,1])
 
 	plt.figure()
@@ -393,7 +394,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	#Y[:, -3] = x + t0*a1*x # b
 	Y[:, -2] = alpha0 + t0*alpha1 # alpha
 	Y[:, -1] = a0 + t0*a1 # a
-	
+
 	return t0,x,Y
 
         
