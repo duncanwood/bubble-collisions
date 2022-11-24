@@ -747,7 +747,7 @@ class SplinePath:
         The total length of the path.
     """
     def __init__(self, pts, V, dV=None, V_spline_samples=100,
-                 extend_to_minima=False, reeval_distances=True):
+                 extend_to_minima=True, reeval_distances=True):
         assert len(pts) > 1
         # 1. Find derivs
         dpts = _pathDeriv(pts)
@@ -757,6 +757,7 @@ class SplinePath:
             # extend at the front of the path
             xmin = optimize.fmin(V_lin, 0.0, args=(pts[0], dpts[0], V), 
                                  xtol=1e-6, disp=0)[0]
+            print 'extend to minima xmin = {}'.format(xmin)
             if xmin > 0.0: xmin = 0.0
             nx = np.ceil(abs(xmin)-.5) + 1
             x = np.linspace(xmin, 0, nx)[:, np.newaxis]
@@ -765,6 +766,7 @@ class SplinePath:
             # extend at the end of the path
             xmin = optimize.fmin(V_lin, 0.0, args=(pts[-1], dpts[-1], V), 
                                  xtol=1e-6, disp=0)[0]
+            print 'extend to minima xmin = {}'.format(xmin)
             if xmin < 0.0: xmin = 0.0
             nx = np.ceil(abs(xmin)-.5) + 1
             x = np.linspace(xmin, 0, nx)[::-1, np.newaxis]
@@ -835,10 +837,10 @@ class SplinePath:
         return np.array(pts).T
         
         
-def fullTunneling(path_pts, V, dV, maxiter=20, fixEndCutoff=.03, 
+def fullTunneling(path_pts, V, dV, maxiter=20, 
                   save_all_steps=False, verbose=False,
                   callback=None, callback_data=None,
-                  V_spline_samples=100,
+                  V_spline_samples=500,
                   tunneling_class=tunneling1D.SingleFieldInstanton,
                   tunneling_init_params={},
                   tunneling_findProfile_params={},
@@ -947,7 +949,7 @@ def fullTunneling(path_pts, V, dV, maxiter=20, fixEndCutoff=.03,
         if verbose: print("Starting tunneling step %i" % num_iter)
         # 1. Fit the spline to the path.
         path = SplinePath(pts, V, dV, V_spline_samples=V_spline_samples,
-                          extend_to_minima=True, reeval_distances=True)
+                          extend_to_minima=False, reeval_distances=True)
         # 2. Do 1d tunneling along the path.
         if V_spline_samples is not None:
             tobj = tunneling_class(0.0, path.L, path.V, path.dV, path.d2V, 

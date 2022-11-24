@@ -39,11 +39,11 @@ def runScript(res, fname, config, xsep=1.0):
     except Exception as e:
         m = 0.0058
         c = 0.002
-        a = 0.000517
-        g = 0.0000001
+        a = 0.00051
+        g = 0.0000004
         f = 1.0
         h = 7.e-8
-        j = 0.00000015
+        j = 0.0000004
     print(config,m,c,a,g,f,h,j)
 
     model = models.TiltedHat(
@@ -55,15 +55,17 @@ def runScript(res, fname, config, xsep=1.0):
         return model.dV(y,True)
 
     plt.figure()
-    phi_list = np.linspace(-0.1,0.6,1000)
-    V_list = [model.V((i, 0.05)) for i in phi_list]
+    phi_list = np.linspace(-0.1,0.4,1000)
+    V_list = [model.V((i, 0.0)) for i in phi_list]
     plt.plot(phi_list,V_list)
     plt.yscale("log")
     plt.savefig("V_1_test.pdf")
 
-    phiT = scipy.optimize.minimize(model.V, (-0.0,0.0)).x
-    phiF_guess = np.array([.36, 0.01])
-    phiF_bounds = ((0.5*phiF_guess[0],1.5*phiF_guess[0]),(phiF_guess[1], phiF_guess[1]))
+    phiT_guess = np.array([-0.006,0.004])
+    phiF_guess = np.array([.35, 0.01])
+    phiT_bounds = ((0.9*phiT_guess[0],1.1*phiT_guess[0]),(0.9*phiT_guess[1], 1.1*phiT_guess[1]))
+    phiF_bounds = ((0.9*phiF_guess[0],1.1*phiF_guess[0]),(0.9*phiF_guess[1], 1.1*phiF_guess[1]))
+    phiT = scipy.optimize.brute(model.V, phiT_bounds)
     phiF = scipy.optimize.minimize(model.V, phiF_guess, bounds=phiF_bounds).x
     print 'phiF: {}\nphiT: {}\nVF: {}\nVT: {}'.format(phiF, phiT, model.V(phiF), model.V(phiT))
 
@@ -103,32 +105,25 @@ def runScript(res, fname, config, xsep=1.0):
     plt.contour(X,Y,Z, np.linspace(np.min(Z), np.max(Z), 200), linewidths=0.5)
     plt.colorbar()
     plt.plot(tobj.Phi[:,0], tobj.Phi[:,1], 'b')
-    plt.savefig("V2D.png")
-
-    plt.figure()
-    plt.plot(r,tobj.Phi[:,0])
-    plt.plot(r,dphi1,'r')
-    plt.title("phi1(r)")
-    plt.savefig("phi1_r.png")
-    plt.figure()
-    plt.plot(r,tobj.Phi[:,1])
-    plt.plot(r,dphi2,'r')
-    plt.title("phi2(r)")
-    plt.savefig("phi2_r.png")
-    plt.figure()
+    plt.savefig("V2D.pdf")
 
     simulation.setModel(model)
-    tfix = 10.
+    tfix = 5.
     rmin = 0.01
     ds_ext = np.sqrt(3/(8*np.pi*model.V(phiF)))
-    rmax = 1000.
-    t_steps = 40.
-    t_metric = 1.0
+    rmax = 1500.
+    t_steps = 30.
+    t_metric = 0.3
     simulation.setFileParams(fname, xres=2, tout=tfix/10.)
     simulation.setIntegrationParams(minStepsPerPeriod = t_steps, t_metric = t_metric)
     t0,x0,y0 = collisionRunner.calcInitialDataFromInst(
         model, inst1, None, phiF, xsep=1.0, xmin=rmin, xmax = rmax, rel_t0=5.e-5)
     
+    plt.figure()
+    plt.plot(x0, y0.T[0], 'r')
+    plt.plot(r,tobj.Phi.T[0] , 'b')
+    plt.savefig("initial_fields.pdf")
+
     simulation.setMonitorCallback(
         collisionRunner.monitorFunc2D(35., 100., 1))
     t, x, y = simulation.runCollision(x0,y0,t0,tfix, growBounds=False)

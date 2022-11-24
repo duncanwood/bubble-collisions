@@ -231,11 +231,10 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	y = np.zeros((len(x), len(phiF)), dtype=float) + phiF
 	dy = np.zeros((len(x), len(phiF)), dtype=float)
 	d2y = np.zeros((len(x), len(phiF)), dtype=float)
-	#xT = np.zeros((len(x), len(phiF)), dtype=float)
 
 	if inst1:
-		tck = interpolate.splprep(inst1['phi'].T, u=inst1['x'], k=5, s=1)[0]
-		dtck = interpolate.splprep(inst1['dphi'].T, u=inst1['x'], k=5, s=1)[0]
+		tck = interpolate.splprep(inst1['phi'].T, u=inst1['x'], k=5, s=0)[0]
+		dtck = interpolate.splprep(inst1['dphi'].T, u=inst1['x'], k=5, s=0)[0]
 		i = (x >= inst1['x'][0]) & (x <= inst1['x'][-1])
 		y[i] += np.array(interpolate.splev(x[i], tck, der=0)).T
 		dy[i] += np.array(interpolate.splev(x[i], dtck, der=0)).T
@@ -261,15 +260,15 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	if (inst2):
 		t0 = min(t0, rel_t0 * inst2["x"][-1])
 
-	Vinterp = interpolate.interp1d(x, V(y),fill_value="extrapolate")
+	Vinterp = interpolate.interp1d(x, V(y),fill_value="extrapolate", kind="cubic")
 	dVinterp = interpolate.interp1d(x, dV(y).T[0],fill_value="extrapolate")
 	Vmin = Vinterp(optimize.minimize(Vinterp, 0.).x)
-	yinterp = interpolate.interp1d(x, y.T[0],fill_value="extrapolate")
+	#yinterp = interpolate.interp1d(x, y.T[0],fill_value="extrapolate")
 	dyinterp = interpolate.interp1d(x, dy.T[0],fill_value="extrapolate")
 	d2yinterp = interpolate.interp1d(x, d2y.T[0], fill_value="extrapolate")
 	if len(phiF) > 1:
 		dV2interp = interpolate.interp1d(x, dV(y).T[1],fill_value="extrapolate")
-		y2interp = interpolate.interp1d(x, y.T[1],fill_value="extrapolate")
+		#y2interp = interpolate.interp1d(x, y.T[1],fill_value="extrapolate")
 		dy2interp = interpolate.interp1d(x, dy.T[1],fill_value="extrapolate")
 		d2y2interp = interpolate.interp1d(x, d2y.T[1],fill_value="extrapolate")
 	
@@ -279,7 +278,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	plt.savefig("V_x.pdf")
 	plt.figure()
 
-    #w = [a0, a1, alpha, da0/dx, da1/dx, dalpha/dx]
+    #w = [a0, a1, alpha0, da0/dx, da1/dx, dalpha0/dx]
 	def diffeq(w, r):
 		da0dx = w[3]
 		d2a0dx2 = (3*r*w[0]**2*w[1]**2 - 4*np.pi*r*dyinterp(r)**2*w[0]**2*w[2]**2 
@@ -304,17 +303,6 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	print "dS radius exterior: {}".format(ds_radius_ext)
 	winit = [1.0, 1/ds_radius, 1.0, 0.0, 0.0, 0.0]
 	wsoln = odeint(diffeq, winit, x)
-	
-	plt.figure()
-	plt.plot(x, wsoln[:,0], 'b', label=r"Calculated $a$")
-	plt.plot(x, wsoln[:,2], 'g', label=r"Calculated $\alpha$")
-	#plt.plot(x,(1-x**2/(ds_radius)**2)**(0.5), 'g-', alpha=0.5, label=r"Theoretical $\alpha$" )
-	#plt.plot(x,(1-x**2/(ds_radius)**2)**(-0.5), 'b-',alpha=0.5, label=r"Theoretical $a$")
-	plt.axvline(x=ds_radius,color='black', label=r"Interior dS rad")
-	plt.axvline(x=ds_radius_ext, color='gray', label=r"Exterior ds rad")
-	plt.legend()
-	plt.ylim(-0.0,2.0)
-	plt.savefig("initial.pdf")
 
 	a0interp = interpolate.UnivariateSpline(x, wsoln[:,0], k=4, s=0)
 	a0interpx = a0interp.derivative()
@@ -325,7 +313,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	alpha0interp = interpolate.UnivariateSpline(x, wsoln[:,2], k=4, s=0)
 	alpha0interpx = alpha0interp.derivative()
 	alpha0interpxx = alpha0interpx.derivative()
-	alpha1arr = (wsoln[:,1]/wsoln[:,0])**4
+	alpha1arr = (wsoln[:,1]/wsoln[:,0])
 	alpha1interp = interpolate.UnivariateSpline(x, alpha1arr, k=4, s=0)
 
 	K3scalar = -3*a1interp(x)/(a0interp(x)*alpha0interp(x))
@@ -335,25 +323,57 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	- 2*a0interp(x)**2*alpha0interp(x)*(alpha0interp(x)*(2*alpha0interpx(x) + x*alpha0interpxx(x)) - 3*x*a1interp(x)**2) 
 	+ a0interp(x)**3*(-6*x*a1interp(x)*alpha1interp(x) + 6*x*alpha0interp(x)*(a1interp(x)**2/a0interp(x) + a1interp(x)*alpha1interp(x)/alpha0interp(x))))
 	
+	"""
+	ds_coord = ds_radius
+	ds_coord_ext = ds_radius_ext
+	for i in range(len(x)):
+		if abs(wsoln[:,0][i]*x[i]-ds_radius_ext)/ds_radius_ext < 1e-2:
+			ds_coord_ext = x[i]
+			print 'r={}, i={}, R={}'.format(x[i], i, wsoln[:,0][i]*x[i])
+			continue
+		if abs(wsoln[:,0][i]*x[i]-ds_radius)/ds_radius < 1e-2:
+			ds_coord = x[i]
+			break
+	"""
+
+	plt.figure()
+	plt.plot(x, a0interp(x), 'b', label=r"Calculated $a$")
+	plt.plot(x, alpha0interp(x), 'g', label=r"Calculated $\alpha$")
+	#plt.axvline(x=ds_coord, color='black', label=r"Interior dS rad")
+	#plt.axvline(x=ds_coord_ext, color='gray', label=r"Exterior ds rad")
+	plt.legend()
+	plt.xlabel("Coordinate r")
+	plt.ylim(-0.0,2.0)
+	plt.savefig("initial.pdf")
+
+	plt.figure()
+	plt.plot(x, x*a0interp(x), 'b')
+	plt.title("Radius of curvature")
+	#plt.axvline(x=ds_coord, color='black', label=r"Interior dS rad")
+	#plt.axvline(x=ds_coord_ext, color='gray', label=r"Exterior ds rad")
+	plt.legend()
+	plt.xlabel("Coordinate r")
+	plt.savefig("rad_curvature.pdf")
+
 	plt.figure()
 	plt.plot(x, R3scalar, 'r', label=r"Ricci 3 scalar curvature")
 	plt.plot(x, 0*np.ones_like(x), 'r--', label=r"Ricci 3 scalar curvature dS")
 	plt.plot(x, R4scalar, 'g', label=r"Ricci 4 scalar curvature")
 	plt.plot(x, 12/ds_radius**2*np.ones_like(x), 'g--', label=r"Ricci 4 scalar curvature dS in")
 	plt.plot(x, 12/ds_radius_ext**2*np.ones_like(x), 'b--', label=r"Ricci 4 scalar curvature dS out")
-	plt.axvline(x=ds_radius,color='black', label="Interior dS rad")
-	plt.axvline(x=ds_radius_ext,color='gray', label="Exterior dS rad")
+	#plt.axvline(x=ds_coord, color='black', label="Interior dS rad")
+	#plt.axvline(x=ds_coord_ext, color='gray', label="Exterior dS rad")
 	plt.legend()
-	plt.ylim(-20/ds_radius_ext**2, 100/ds_radius_ext**2)
-	plt.xlabel("r")
+	plt.ylim(-100/ds_radius_ext**2, 100/ds_radius_ext**2)
+	plt.xlabel("Coordinate r")
 	plt.savefig("ricci_scalars.pdf")
 
 	plt.figure()
 	plt.plot(x, K3scalar, 'b', label=r"Extrinsic scalar curvature")
 	plt.plot(x, -3/ds_radius*np.ones_like(x), 'b--', label=r"Extrinsic scalar curvature dS in")
 	plt.plot(x, -3/ds_radius_ext*np.ones_like(x), 'g--', label=r"Extrinsic scalar curvature dS out")
-	plt.axvline(x=ds_radius,color='black', label="Interior dS rad")
-	plt.axvline(x=ds_radius_ext,color='gray', label="Exterior dS rad")
+	#plt.axvline(x=ds_coord, color='black', label="Interior dS rad")
+	#plt.axvline(x=ds_coord_ext, color='gray', label="Exterior dS rad")
 	plt.legend()
 	plt.xlabel("r")
 	plt.savefig("ext_scalar.pdf")
@@ -381,9 +401,10 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		#alpha1 = np.array(0*wsoln[:,1])
 
 	plt.figure()
-	plt.plot(x,a1, 'b')
-	plt.plot(x,alpha1,'g')
-	plt.plot(x, a1/(a0*alpha0), 'k')
+	plt.plot(x,a1, 'b', label='a dot')
+	plt.plot(x,alpha1,'g', label='alpha dot')
+	plt.plot(x, a1/(a0*alpha0), 'k', label='a dot = # * a * alpha')
+	plt.legend()
 	plt.savefig("initial_time_deriv.pdf")
 
 	N = len(phiF)

@@ -632,7 +632,7 @@ int dY_bubbles(double t, double *x, double *y, double *c1, double *c2, int nx, d
 		A = alphaX[i]/(pow(3*x[i],1/2)*aX[i])*pow(A,1/2); // add extra fields inside sqrt above 
 		dY_out[ny*i+ny-1] = A; // da/dN
 		//dY_out[ny*i+ny-2] = A/(aX[i]*alphaX[i]); // dalpha/dN
-		dY_out[ny*i+ny-2] = pow(A/aX[i],4);
+		dY_out[ny*i+ny-2] = A/aX[i];
 		//dY_out[ny*i+ny-3] = 0; // db/dN
 
 	}
