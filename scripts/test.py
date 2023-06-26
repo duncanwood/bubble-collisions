@@ -1,43 +1,80 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import os
 import numpy as np
 from bubble_collisions import simulation, models, collisionRunner
-from bubble_collisions import geodesics, bubble_analytics
+from bubble_collisions.cosmoTransitions import pathDeformation as pd
 from bubble_collisions.cosmoTransitions import tunneling1D
-from bubble_collisions.derivsAndSmoothing import deriv14, smooth
+from bubble_collisions.derivsAndSmoothing import deriv14
+import matplotlib.pyplot as plt
+import scipy.interpolate as intp
+import scipy.optimize
+import pickle
+import ConfigParser
 
 def runSimulations(overwrite):
-    
-    m = 0.01
-    c = 1.e-4
-    a = 1.79e-4
-    g = 5e-6
+    """    
+    m = 0.0058
+    c = 0.002
+    a = 0.000519
+    g = 0.0000007
     f = 1.0
-    h = 1.e-5
-    j = 1.e-5
-    phi2 = 0.005
+    h = 0.45e-7
+    j = 0.0000001
+    phi2 = 0.0
 
     model = models.TiltedHat1D(
         m=m, a=a, c=c, g=g, f=f, h=h, j=j, phi2=phi2)
+    """
+
+    a = 0.1
+    C = 2.0
+
+    model = models.Johnson1D(
+        a=a, C=C)
 
     def V(y):
         return model.V(y,True)
     def dV(y):
         return model.dV(y,True)
+    plt.figure()
+    phi_list = np.linspace(-1.2,1.2, 1000)
+    V_list = [V((i)) for i in phi_list]
+    plt.plot(phi_list,V_list)
+    plt.savefig("V_1D.pdf")
 
-    phiF = 0.85
-    phiT = -0.03
+    phiF = -0.95
+    phiT = 1.05
+    mpl = 385.
+    eps = np.sqrt(8.*np.pi/(3*mpl**2))
 
-    tobj = tunneling1D.SingleFieldInstanton(phiT, phiF, V, dV)
+    """tobj = tunneling1D.SingleFieldInstanton(phiT, phiF, V, dV)
     profile = tobj.findProfile(
-        xtol=1e-15, phitol=1e-5, thinCutoff=1e-2, npoints=1000)
+        xtol=1e-10, phitol=1e-5, thinCutoff=1e-4, npoints=1000)"""
+    tobj = tunneling1D.InstantonWithGravity(phiT, phiF, V, dV, M_Pl=mpl)
+    profile = tobj.findProfile(
+        xtol=1e-10, phitol=1e-5, thinCutoff=1e-4, npoints=1000, xvalue=2.)
+
+    print(eps)
 
     r, phi = profile.R, profile.Phi[:,np.newaxis] # get phi to have shape (nx,1)
+    rho = profile.Rho
     dphi = profile.dPhi[:,np.newaxis]
     inst = dict(r=r, phi=phi, dphi=dphi)
     inst1 = inst2 = inst
+
+    ds_ext = np.sqrt(3/(8*np.pi*V(phiF)))
+
+    plt.figure()
+    plt.plot(r, rho, 'r')
+    plt.plot(r, ds_ext*np.ones_like(r),'b')
+    plt.savefig("rho.pdf")
+
+    plt.figure()
+    plt.plot(r, phi, 'b')
+    plt.savefig("phi_units.pdf")
+
+    fjdklfskdfjlsfsdljs
     """
     model.setParams(phi0=phi_vac)
     simulation.setFileParams("test/test_collision_fixed.dat", xres=4, tout=.05)

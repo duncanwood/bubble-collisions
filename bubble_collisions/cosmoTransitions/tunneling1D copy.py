@@ -1004,7 +1004,7 @@ class InstantonWithGravity(SingleFieldInstanton):
 
     def findProfile(self, xguess=None, xtol=1e-4, phitol=1e-4, 
                     thinCutoff=.01, npoints=500, rmin=1e-4, rmax=1e4,
-                    max_interior_pts=None, xvalue=5., extend=0.0, rhotol=10.):
+                    max_interior_pts=None, xvalue=5.):
         R"""
         Calculate the bubble profile by iteratively over/undershooting.
         
@@ -1074,12 +1074,8 @@ class InstantonWithGravity(SingleFieldInstanton):
                     
         # Integrate a second time, this time getting the points along the way
         R = np.linspace(r0, rf, npoints)
-        if extend < 1.0:
-            profile = self.integrateAndSaveProfile(R, y0, dr0, 
+        profile = self.integrateAndSaveProfile(R, y0, dr0, 
                                                epsfrac, epsabs, drmin)
-        else:
-            profile = self.integrateAndSaveProfileExtendRange(R, y0, dr0, 
-                                               epsfrac, epsabs, drmin, extend=extend, rhotol=rhotol)
 
         # Make points interior to the bubble.
         if max_interior_pts is None:
@@ -1126,107 +1122,6 @@ class InstantonWithGravity(SingleFieldInstanton):
             profile = self.profile_rval(R, Phi, dPhi, Rho, dRho, profile.Rerr)
 
         return profile
-
-    def integrateAndSaveProfileExtendRange(self, R, y0, dr, 
-                                epsfrac, epsabs, drmin, extend=0.0, rhotol=1.0, *eqn_args):
-        """
-        Integrate the bubble profile, saving the output in an array. 
-        Extends the R range to make sure rho at R[-1] is less than rhotol.
-        
-        Parameters
-        ----------
-        R: array_like 
-            The array of points at which we want to save the profile.
-        y0 : float 
-            The starting values [phi(r0), dphi(r0), rho(r0), drho(r0)].
-        dr : float
-            Starting stepsize.
-        epsfrac, epsabs : float 
-            The error tolerances used for integration. This
-            is fed into :func:`helper_functions.rkqs`.
-        extend : float
-            Extend R array by factor extend
-        rhotol : float
-            Rho at rmax < rhotol
-        drmin : float
-            The smallest allowed stepsize.
-        eqn_args : tuple
-            Extra arguments to pass to :func:`equationOfMotion`. Useful for
-            subclasses.
- 
-        Returns
-        -------
-        R, Phi, dPhi, Rho, dRho : array_like 
-            Radii and field values which make up the bubble profile.
-        Rerr : float or None
-            The first value of `r` at which ``dr < drmin``, or `None` if
-            ``dr >= drmin`` always.
-
-        Notes
-        -----
-        Subclasses can use this function without overriding it even if the
-        subclass uses more fields/values in its equation of motion (i.e., 
-        ``len(y0) > 2``). This is accomplished by setting the class variable
-        `profile_rval` to a different named tuple type with more than four
-        inputs. The first three should always be *R, Phi, dPhi*, and the last
-        one should be *Rerr*, but additional values can be stuck in between.
-        """
-        Ninit = len(R)
-        Rmaxinit = R[-1]
-        print R[-1]
-        if extend < 1.0:
-            N = len(R)
-            R, r0 = np.array(R), R[0]
-        else:
-            N = int(extend*len(R))
-            R, r0 = np.linspace(R[0], extend*R[-1], N), R[0]
-        
-        Yout = np.zeros((N,len(y0)))
-        Yout[0] = y0
-        # dY is the ODE that we use
-        def dY(y,r,args=eqn_args): 
-            return self.equationOfMotion(y,r,*args)
-        dydr0 = dY(y0, r0)
-        Rerr = None
-                
-        i = 1
-        while i < N:
-            if (i > Ninit) or (R[i] > 0.95*Rmaxinit):
-                dy, dr, drnext = rkqs(y0, dydr0, r0, dY, dr, epsfrac, epsabs)
-                dy[0] = 0.0
-                dy[1] = 0.0
-                dydr0[0] = 0.0
-                dydr0[1] = 0.0
-            else:
-                dy, dr, drnext = rkqs(y0, dydr0, r0, dY, dr, epsfrac, epsabs)
-            if (dr >= drmin):    
-                r1 = r0 + dr
-                y1 = y0 + dy
-            else:
-                y1 = y0 + dy*drmin/dr
-                dr = drnext = drmin
-                r1 = r0 + dr
-                if Rerr is not None: Rerr = r1
-            dydr1 = dY(y1,r1)
-            # Fill the arrays, if necessary
-            if (r0 < R[i] <= r1):
-                f = cubicInterpFunction(y0, dr*dydr0, y1, dr*dydr1)
-                while (i < N and r0 < R[i] <= r1):
-                    x = (R[i]-r0)/dr
-                    Yout[i] = f(x)
-                    i += 1
-            if (y0[2] < rhotol) and (i > Ninit//2):
-                print "We have extended to rho tol"
-                R = R[:i]
-                Yout = Yout[:i]
-                break  
-
-            # Advance the integration variables
-            r0,y0,dydr0 = r1,y1,dydr1
-            dr = drnext
-        
-        rval = (R,)+tuple(Yout.T)+eqn_args+(Rerr,)
-        return self.profile_rval(*rval)
 
     def findAction(self, profile):
         """

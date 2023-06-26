@@ -5,49 +5,72 @@ from bubble_collisions.cosmoTransitions import tunneling1D
 from bubble_collisions.derivsAndSmoothing import deriv14
 import matplotlib.pyplot as plt
 
-def runScript(res, fname, xsep=1.0):
+def runScript(res=1.0, fname=None, xsep=1.0):
     """
     Run a high-resolution simulation for the benchmark point.
     The 'res' input parameter specifies the overall resolution relative
     to the default value that was used for the collision_pheno paper.
     """
-    mu = 0.05
-    omega = 0.1
-    Delta_phi = 0.001
-    phi_vac = 3.0
+    a = -0.1
+    C = 2.
     
-    model = models.GenericPiecewise_NoHilltop_Model(
-        mu=mu, omega=omega, Delta_phi=Delta_phi, phi0=0.0)
+    model = models.Johnson1D(
+        a = a, C = C)
 
     def V(y):
         return model.V(y,True)
     def dV(y):
         return model.dV(y,True)
-    phiF = 0.0
-    phiT = Delta_phi
+    phiF = 1./2*(a+np.sqrt(a**2+4))
+    phiT = 1./2*(a-np.sqrt(a**2+4))
 
     #tobj0 = tunneling1D_old.bubbleProfile(phiT, phiF, V, dV, alpha=3)
     #tobj0.kappa = 8*np.pi
     #p0 = tobj0.findProfile(xtol=1e-7, phitol=phiT*1e-6, thinCutoff=2e-3,
     #                        npoints=3000, verbose=True)
-    tobj = tunneling1D.InstantonWithGravity(phiT, phiF, V, dV)
+    tobj = tunneling1D.SingleFieldInstanton(phiT, phiF, V, dV)
     profile = tobj.findProfile(
-        xtol=1e-7, phitol=1e-6, thinCutoff=2e-3, npoints=5000)
+        xtol=1e-4, phitol=1e-4, thinCutoff=0.01, npoints=500)
 
     r, phi = profile.R, profile.Phi[:,np.newaxis] # get phi to have shape (nx, 1)
     dphi = profile.dPhi[:,np.newaxis]
     inst = dict(r=r, phi=phi, dphi=dphi)
-    inst1 = inst2 = inst
     
-    
-    plt.plot(r,phi)
-    plt.title("phi(r)")
-    plt.savefig("phi_r.png")
+    plt.figure()
+    plt.plot(r,phi,'r')
+    #plt.plot(r, profile.Rho, 'b')
+    plt.title("phi, rho")
+    plt.savefig("phi_rh0.pdf")
     plt.figure()
     plt.plot(phi,V(phi))
     plt.title("V(phi)")
-    plt.savefig("V_phi.png")
+    plt.savefig("V_phi.pdf")
     
+    print("\n \n \n \n Now do it again with gravity \n \n \n \n")
+
+
+    tobj2 = tunneling1D.InstantonWithGravity(phiT, phiF, V, dV, M_Pl=50.)
+    profile2 = tobj2.findProfile(
+        xtol=1e-4, phitol=1e-4, thinCutoff=0.001, npoints=3000)
+
+    r2, phi2 = profile2.R, profile2.Phi[:,np.newaxis] # get phi to have shape (nx, 1)
+    dphi2 = profile2.dPhi[:,np.newaxis]
+    inst2 = dict(r=r2, phi=phi2, dphi=dphi2)
+    
+    
+    plt.figure()
+    plt.plot(r2,phi2,'r')
+    plt.plot(r,phi, 'k')
+    plt.plot(r2, profile2.Rho, 'b')
+    plt.title("phi, rho")
+    plt.savefig("phi_rho2.pdf")
+    plt.figure()
+    plt.plot(phi2,V(phi2))
+    plt.title("V(phi)")
+    plt.savefig("V_phi2.pdf")
+    
+
+    """
     model.setParams(phi0=phi_vac)
     # At first, the output should be kind of coarse.
     simulation.setModel(model)
@@ -63,7 +86,7 @@ def runScript(res, fname, xsep=1.0):
     if (t < tfix*.9999):
        raise RuntimeError("Didn't reach tfix. Aborting.")
 
-"""
+
     # Truncate the simulation
     truncation = .95
     bubble_radius = 2*np.arctan(np.tanh(t/2.0))
@@ -82,8 +105,8 @@ def runScript(res, fname, xsep=1.0):
     t,x,y = simulation.runCollision(x,y,t,t_end_hr_out, 
         growBounds=False, overwrite=False)
     return t,x,y
-"""
-"""
+
+
 def runNonIdentScript(res, fname, xsep=1.0):
    """ """
     Run a high-resolution simulation for the benchmark model in a non-identical

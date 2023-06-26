@@ -20,6 +20,7 @@ from .derivsAndSmoothing import deriv14, deriv23
 from . import simulation
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
+from math import acosh, cosh, sinh, exp
 
 def timeSlicesForShockParams(
 		xsep, obs_inst_radius, col_wall_inner, col_wall_outer, 
@@ -163,7 +164,7 @@ def makeTwoSidedInstanton(inst, phiF):
 	phi = np.append(phi[::-1], phi[1:], axis=0)
 	return dict(x=x, phi=phi, dphi=dphi)
 
-def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001, 
+def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.01, 
 	tail_extension = 0.1, xmin=None, xmax=None):
 	"""
 	Calculate initial conditions for the simulation starting from instantons.
@@ -211,38 +212,36 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	"""
 	phiF = np.array(phiF).ravel() 
 	# so that we can just input a number when there's only 1 field
-
-	# First, make the instantons two-sided.
-	inst1 = makeTwoSidedInstanton(inst1, phiF)
 	inst1['phi'] -= phiF
 	if inst2:
 		inst2 = makeTwoSidedInstanton(inst2, phiF)
 		inst2['phi'] -= phiF
 
 	# Set up the spatial grid.
-	dx = inst1['x'][1] - inst1['x'][0]
+	dx = inst1['r'][1] - inst1['r'][0]
 	if xmin is None or xmax is None:
-		xmin = inst1['x'][0]*(1+tail_extension)
+		xmin = inst1['r'][0]*(1+tail_extension)
 		if inst2:
-			xmax = xsep + inst2['x'][-1]*(1+tail_extension)
+			xmax = xsep + inst2['r'][-1]*(1+tail_extension)
 		else:
-			xmax = inst1['x'][-1]*(1+tail_extension)
+			xmax = inst1['r'][-1]*(1+tail_extension)
+			
 	x = np.arange(xmin, xmax, dx)
 	y = np.zeros((len(x), len(phiF)), dtype=float) + phiF
 	dy = np.zeros((len(x), len(phiF)), dtype=float)
 	d2y = np.zeros((len(x), len(phiF)), dtype=float)
 
 	if inst1:
-		tck = interpolate.splprep(inst1['phi'].T, u=inst1['x'], k=5, s=0)[0]
-		dtck = interpolate.splprep(inst1['dphi'].T, u=inst1['x'], k=5, s=0)[0]
-		i = (x >= inst1['x'][0]) & (x <= inst1['x'][-1])
+		tck = interpolate.splprep(inst1['phi'].T, u=inst1['r'], k=5, s=0)[0]
+		dtck = interpolate.splprep(inst1['dphi'].T, u=inst1['r'], k=5, s=0)[0]
+		i = (x >= inst1['r'][0]) & (x <= inst1['r'][-1])
 		y[i] += np.array(interpolate.splev(x[i], tck, der=0)).T
 		dy[i] += np.array(interpolate.splev(x[i], dtck, der=0)).T
 		d2y[i] += np.array(interpolate.splev(x[i], dtck, der=1)).T
 	if inst2:
-		tck = interpolate.splprep(inst2['phi'].T, u=inst2['x'], s=0)[0]
-		dtck = interpolate.splprep(inst2['dphi'].T, u=inst2['x'], s=0)[0]
-		i = (x >= inst2['x'][0]+xsep) & (x <= inst2['x'][-1]+xsep)
+		tck = interpolate.splprep(inst2['phi'].T, u=inst2['r'], s=0)[0]
+		dtck = interpolate.splprep(inst2['dphi'].T, u=inst2['r'], s=0)[0]
+		i = (x >= inst2['r'][0]+xsep) & (x <= inst2['r'][-1]+xsep)
 		y[i] += np.array(interpolate.splev(x[i]-xsep, tck, der=0)).T
 		dy[i] += np.array(interpolate.splev(x[i]-xsep, dtck, der=0)).T
 		d2y[i] += np.array(interpolate.splev(x[i]-xsep, dtck, der=1)).T
@@ -256,14 +255,14 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	V = model.V
 	dV = model.dV
 
-	t0 = rel_t0 * inst1["x"][-1]
+	t0 = rel_t0 * inst1['r'][-1]
 	if (inst2):
-		t0 = min(t0, rel_t0 * inst2["x"][-1])
+		t0 = min(t0, rel_t0 * inst2['r'][-1])
 
 	Vinterp = interpolate.interp1d(x, V(y),fill_value="extrapolate", kind="cubic")
 	dVinterp = interpolate.interp1d(x, dV(y).T[0],fill_value="extrapolate")
 	Vmin = Vinterp(optimize.minimize(Vinterp, 0.).x)
-	#yinterp = interpolate.interp1d(x, y.T[0],fill_value="extrapolate")
+	yinterp = interpolate.interp1d(x, y.T[0],fill_value="extrapolate")
 	dyinterp = interpolate.interp1d(x, dy.T[0],fill_value="extrapolate")
 	d2yinterp = interpolate.interp1d(x, d2y.T[0], fill_value="extrapolate")
 	if len(phiF) > 1:
@@ -278,43 +277,114 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	plt.savefig("V_x.pdf")
 	plt.figure()
 
-    #w = [a0, a1, alpha0, da0/dx, da1/dx, dalpha0/dx]
-	def diffeq(w, r):
-		da0dx = w[3]
-		d2a0dx2 = (3*r*w[0]**2*w[1]**2 - 4*np.pi*r*dyinterp(r)**2*w[0]**2*w[2]**2 
-		- 4*np.pi*r*dy2interp(r)**2*w[0]**2*w[2]**2
-		- 8*np.pi*Vinterp(r)*r*w[0]**4*w[2]**2 - 4*w[0]*w[2]**2*w[3]
-		+ r*w[2]**2*w[3]**2)/(2*r*w[0]*w[2]**2)
-		dalphdx = w[5]
-		d2alphdx2 = 1/(r*w[0]**2)*(-8*np.pi*r*dyinterp(r)**2*w[0]**2*w[2] 
-		- 8*np.pi*r*dy2interp(r)**2*w[0]**2*w[2] + w[0]*w[2]*w[3] 
-		+ 2*r*w[2]*w[3]**2 + w[0]**2*w[5] + 2*r*w[0]*w[3]*w[5] 
-		- r*w[0]*w[2]*d2a0dx2)
-		da1dx = w[4]
-		d2a1dx2 = (-w[1]**2*w[2]*w[3]**2 + w[0]**2*w[2]*w[4]**2 
-		+ w[0]*w[1]**2*w[3]*w[5] - w[0]**2*w[1]*w[4]*w[5] 
-		+ w[0]*w[1]**2*w[2]*d2a0dx2 + w[0]**2*w[1]**2*d2alphdx2)/(w[0]**2*w[1]*w[2])
-		dwdx = [da0dx, da1dx, dalphdx, d2a0dx2, d2a1dx2, d2alphdx2]
-		return dwdx
-
+	plt.figure()
+	plt.plot(x, y.T[0], 'r')
+	plt.savefig("phi.pdf")
+	
+	#Rescale instanton to get a0[x]
 	ds_radius = np.sqrt(3/(8*np.pi*Vmin))[0]
 	ds_radius_ext = np.sqrt(3/(8*np.pi*V(phiF)))
-	print "dS radius interior: {}".format(ds_radius)
-	print "dS radius exterior: {}".format(ds_radius_ext)
-	winit = [1.0, 1/ds_radius, 1.0, 0.0, 0.0, 0.0]
-	wsoln = odeint(diffeq, winit, x)
 
-	a0interp = interpolate.UnivariateSpline(x, wsoln[:,0], k=4, s=0)
+	a0arr = np.array(inst1['rho'])/np.array(inst1['r'])	
+	a0interp = interpolate.UnivariateSpline(inst1['r'], a0arr, k=4, s=0)
 	a0interpx = a0interp.derivative()
 	a0interpxx = a0interpx.derivative()
-	a1interp = interpolate.UnivariateSpline(x, wsoln[:,1], k=4, s=0)
-	a1interpx = a1interp.derivative()
-	a1interpxx = a1interpx.derivative()	
-	alpha0interp = interpolate.UnivariateSpline(x, wsoln[:,2], k=4, s=0)
+
+	plt.figure()
+	plt.plot(x, a0interp(x), 'r')
+	plt.savefig("a0.pdf")
+
+    #w = [a0, alph, da0dx, dalphdx]
+	def diffeq(w, r):
+		da0dx = w[2]
+		d2a0dx2 = a0interpxx(r)
+		#d2a0dx2 = (3*r*w[0]**2*w[1]**2 - 4*np.pi*r*dyinterp(r)**2*w[0]**2*w[2]**2 
+		#- 4*np.pi*r*dy2interp(r)**2*w[0]**2*w[2]**2
+		#- 8*np.pi*Vinterp(r)*r*w[0]**4*w[2]**2 - 4*w[0]*w[2]**2*w[3]
+		#+ r*w[2]**2*w[3]**2)/(2*r*w[0]*w[2]**2)
+		dalphdx = w[3]
+		d2alphdx2 = 1/(r*w[0]**2)*(-8*np.pi*r*dyinterp(r)**2*w[0]**2*w[1] 
+		- 8*np.pi*r*dy2interp(r)**2*w[0]**2*w[1] + w[0]*w[2]*w[1] 
+		+ 2*r*w[1]*w[2]**2 + w[0]**2*w[3] + 2*r*w[0]*w[2]*w[3] 
+		- r*w[0]*w[1]*d2a0dx2)
+		#da1dx = w[4]
+		#d2a1dx2 = (-w[1]**2*w[2]*w[3]**2 + w[0]**2*w[2]*w[4]**2 
+		#+ w[0]*w[1]**2*w[3]*w[5] - w[0]**2*w[1]*w[4]*w[5] 
+		#+ w[0]*w[1]**2*w[2]*d2a0dx2 + w[0]**2*w[1]**2*d2alphdx2)/(w[0]**2*w[1]*w[2])
+		dwdx = [da0dx, dalphdx, d2a0dx2, d2alphdx2]
+		return dwdx
+
+	#print "dS radius interior: {}".format(ds_radius)
+	#print "dS radius exterior: {}".format(ds_radius_ext)
+
+	winit = [a0interp(x[0]), 1.0, a0interpx(x[0]), 0.0]
+	wsoln = odeint(diffeq, winit, x)
+	
+	"""
+	# Find wall x value (where slope of instanton is largest)
+	wall_index = np.argmax(dy.T[0])
+	xL = [x[i] for i in range(wall_index)]
+	xR = list(reversed([x[i] for i in range(wall_index,len(x))]))
+	winitL = [a0interp(xL[0]), 1.0, a0interpx(xL[0]), 0.0]
+	winitR = [a0interp(xR[0]), 1.0, a0interpx(xR[0]), 0.0]
+	wsolnL = odeint(diffeq, winitL, xL)
+	wsolnR = odeint(diffeq, winitR, xR)
+
+	winittot = [a0interp(x[-1]), 1.0, a0interpx(x[-1]), 0.0]
+	wsolntot = odeint(diffeq, winittot, np.flip(x))
+
+
+	plt.figure()
+	plt.plot(x, np.flip(wsolntot[:,1]),'r')
+	plt.savefig("alpha0_Right.pdf")
+	plt.figure()
+
+	"""
+	#alpha0piece = np.concatenate((wsolnL[:,1], np.flip(wsolnR[:,1])))
+	#alpha0piece = np.flip(wsolntot[:,1])
+	alpha0interp = interpolate.UnivariateSpline(x, wsoln[:,1], k=4, s=0)
 	alpha0interpx = alpha0interp.derivative()
 	alpha0interpxx = alpha0interpx.derivative()
-	alpha1arr = (wsoln[:,1]/wsoln[:,0])
+	#alpha1arr = (wsoln[:,1]/wsoln[:,0])
+	alpha1arr = np.zeros(len(x))
 	alpha1interp = interpolate.UnivariateSpline(x, alpha1arr, k=4, s=0)
+
+	plt.figure()
+	plt.plot(x,alpha0interp(x),'r')
+	plt.savefig("alpha0_cheat.pdf")
+	plt.figure()
+
+	plt.figure()
+	plt.plot(x[:100], alpha0interpxx(x[:100]),'r')
+	plt.plot(x[:100], (-8*np.pi*x[:100]*(dyinterp(x[:100])**2 + dy2interp(x[:100])**2)*a0interp(x[:100])**2*alpha0interp(x[:100]) 
+		   + alpha0interp(x[:100])*a0interpx(x[:100])*a0interp(x[:100]) + 2*x[:100]*alpha0interp(x[:100])*a0interpx(x[:100])**2
+		   + a0interp(x[:100])**2*alpha0interpx(x[:100]) + 2*x[:100]*alpha0interpx(x[:100])*a0interpx(x[:100])*a0interp(x[:100])
+		   - x[:100]*a0interp(x[:100])*alpha0interp(x[:100])*a0interpxx(x[:100]))/(x[:100]*a0interp(x[:100])**2),'b')
+	plt.savefig("alpha0pp_cheat.pdf")
+	plt.figure()
+
+	#Solve for a1 from knowing a0, alpha0
+	def a1fn(X):
+		return 1/(np.sqrt(3)*a0interp(X))*alpha0interp(X)*np.sqrt(8*np.pi*a0interp(X)**4 * Vinterp(X)
+		+ 4*a0interp(X)*a0interpx(X)/X - a0interpx(X)**2 + 4*np.pi*a0interp(X)**2*(dyinterp(X)**2+dy2interp(X)**2)
+		+ 2*a0interp(X)*a0interpxx(X))
+	
+	plt.figure()
+	plt.plot(x,8*np.pi*a0interp(x)**4 * Vinterp(x)
+		+ 4*a0interp(x)*a0interpx(x)/x - a0interpx(x)**2 + 4*np.pi*a0interp(x)**2*(dyinterp(x)**2+dy2interp(x)**2)
+		+ 2*a0interp(x)*a0interpxx(x),'b')
+	plt.savefig("a1_fn.pdf")
+	plt.figure()
+
+
+	a1interp = interpolate.UnivariateSpline(x, a1fn(x), k=4, s=0)
+	a1interpx = a1interp.derivative()
+	a1interpxx = a1interpx.derivative()	
+
+	plt.figure()
+	plt.plot(x,a1interp(x),'r')
+	plt.savefig("a1_cheat.pdf")
+	plt.figure()
 
 	K3scalar = -3*a1interp(x)/(a0interp(x)*alpha0interp(x))
 	R3scalar = (2*x*a0interpx(x)**2-4*a0interp(x)*(2*a0interpx(x) + x*a0interpxx(x)))/(x*a0interp(x)**4)
@@ -323,7 +393,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	- 2*a0interp(x)**2*alpha0interp(x)*(alpha0interp(x)*(2*alpha0interpx(x) + x*alpha0interpxx(x)) - 3*x*a1interp(x)**2) 
 	+ a0interp(x)**3*(-6*x*a1interp(x)*alpha1interp(x) + 6*x*alpha0interp(x)*(a1interp(x)**2/a0interp(x) + a1interp(x)*alpha1interp(x)/alpha0interp(x))))
 	
-	"""
+	
 	ds_coord = ds_radius
 	ds_coord_ext = ds_radius_ext
 	for i in range(len(x)):
@@ -334,23 +404,19 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 		if abs(wsoln[:,0][i]*x[i]-ds_radius)/ds_radius < 1e-2:
 			ds_coord = x[i]
 			break
-	"""
+	
 
 	plt.figure()
 	plt.plot(x, a0interp(x), 'b', label=r"Calculated $a$")
 	plt.plot(x, alpha0interp(x), 'g', label=r"Calculated $\alpha$")
-	#plt.axvline(x=ds_coord, color='black', label=r"Interior dS rad")
-	#plt.axvline(x=ds_coord_ext, color='gray', label=r"Exterior ds rad")
+	plt.plot(x, 0*x, 'k')
 	plt.legend()
 	plt.xlabel("Coordinate r")
-	plt.ylim(-0.0,2.0)
 	plt.savefig("initial.pdf")
 
 	plt.figure()
 	plt.plot(x, x*a0interp(x), 'b')
 	plt.title("Radius of curvature")
-	#plt.axvline(x=ds_coord, color='black', label=r"Interior dS rad")
-	#plt.axvline(x=ds_coord_ext, color='gray', label=r"Exterior ds rad")
 	plt.legend()
 	plt.xlabel("Coordinate r")
 	plt.savefig("rad_curvature.pdf")
@@ -361,10 +427,7 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	plt.plot(x, R4scalar, 'g', label=r"Ricci 4 scalar curvature")
 	plt.plot(x, 12/ds_radius**2*np.ones_like(x), 'g--', label=r"Ricci 4 scalar curvature dS in")
 	plt.plot(x, 12/ds_radius_ext**2*np.ones_like(x), 'b--', label=r"Ricci 4 scalar curvature dS out")
-	#plt.axvline(x=ds_coord, color='black', label="Interior dS rad")
-	#plt.axvline(x=ds_coord_ext, color='gray', label="Exterior dS rad")
 	plt.legend()
-	plt.ylim(-100/ds_radius_ext**2, 100/ds_radius_ext**2)
 	plt.xlabel("Coordinate r")
 	plt.savefig("ricci_scalars.pdf")
 
@@ -372,38 +435,35 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	plt.plot(x, K3scalar, 'b', label=r"Extrinsic scalar curvature")
 	plt.plot(x, -3/ds_radius*np.ones_like(x), 'b--', label=r"Extrinsic scalar curvature dS in")
 	plt.plot(x, -3/ds_radius_ext*np.ones_like(x), 'g--', label=r"Extrinsic scalar curvature dS out")
-	#plt.axvline(x=ds_coord, color='black', label="Interior dS rad")
-	#plt.axvline(x=ds_coord_ext, color='gray', label="Exterior dS rad")
 	plt.legend()
 	plt.xlabel("r")
 	plt.savefig("ext_scalar.pdf")
 
-	if len(phiF) > 1:
-		phi2 = np.array((wsoln[:,2]*(-x*dVinterp(x)*wsoln[:,0]**3*wsoln[:,2] 
-		+ x*dyinterp(x)*wsoln[:,2]*wsoln[:,3] + wsoln[:,0]*((x*d2yinterp(x) 
-		+ 2*dyinterp(x))*wsoln[:,2] + x*dyinterp(x)*wsoln[:,5])), 
-		wsoln[:,2]*(-x*dV2interp(x)*wsoln[:,0]**3*wsoln[:,2] 
-		+ x*dy2interp(x)*wsoln[:,2]*wsoln[:,3] + wsoln[:,0]*((x*d2y2interp(x) 
-		+ 2*dy2interp(x))*wsoln[:,2] + x*dy2interp(x)*wsoln[:,5]))))
+	if len(phiF)<=1:
+		#Broken
+		a0 = np.zeros(len(x))
+		a1 = np.zeros(len(x))
 	else:
+		a0 = np.array([a0interp(x[i]) for i in range(len(x))])
+		a1 = np.array([a1interp(x[i]) for i in range(len(x))])
+		alpha0 = np.array([alpha0interp(x[i]) for i in range(len(x))])
+		alpha1 = alpha1arr
+
+	if len(phiF) > 1:
+		phi2 = np.array((1/(2*x*a0interp(x)**3)*alpha0interp(x)*(x*alpha0interp(x)*a0interpx(x)*dyinterp(x) 
+		+ a0interp(x)*(x*alpha0interpx(x)*dyinterp(x) + alpha0interp(x)*(2*dyinterp(x) + x*d2yinterp(x))) - x*a0interp(x)**3*dVinterp(x)),
+		1/(2*x*a0interp(x)**3)*alpha0interp(x)*(x*alpha0interp(x)*a0interpx(x)*dy2interp(x) 
+		+ a0interp(x)*(x*alpha0interpx(x)*dy2interp(x) + alpha0interp(x)*(2*dy2interp(x) + x*d2y2interp(x))) - x*a0interp(x)**3*dV2interp(x))))	
+	else:
+		#Broken
 		phi2 = np.array()
 	phi2T = phi2.T
-	if len(phiF)<=1:
-		a0 = 0
-		a1 = 0
-		a2 = 0
-	else:
-		a0 = np.array(wsoln[:, 0])
-		a1 = np.array(wsoln[:, 1])
-		a2 = 0
-		alpha0 = np.array(wsoln[:, 2])
-		alpha1 = np.array(alpha1arr)
-		#alpha1 = np.array(0*wsoln[:,1])
+	
 
 	plt.figure()
 	plt.plot(x,a1, 'b', label='a dot')
 	plt.plot(x,alpha1,'g', label='alpha dot')
-	plt.plot(x, a1/(a0*alpha0), 'k', label='a dot = # * a * alpha')
+	plt.plot(x, 1/ds_radius*(a0*alpha0), 'r--', label='a dot = # * a * alpha')
 	plt.legend()
 	plt.savefig("initial_time_deriv.pdf")
 
@@ -412,7 +472,6 @@ def calcInitialDataFromInst(model, inst1, inst2, phiF, xsep, rel_t0 = 0.001,
 	
 	Y[:, :N] = y + t0*t0*phi2T # phi
 	Y[:, N:2*N] = 2*t0*phi2T # Pi = (dphi/dN) * (a/alpha) ~ dphi/dN
-	#Y[:, -3] = x + t0*a1*x # b
 	Y[:, -2] = alpha0 + t0*alpha1 # alpha
 	Y[:, -1] = a0 + t0*a1 # a
 
